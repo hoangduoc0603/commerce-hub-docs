@@ -1,7 +1,7 @@
 # commerce-hub: Đặc tả yêu cầu phần mềm (SRS)
 
-- Phiên bản: 1.1
-- Ngày: 2026-11-13 (1.1: BR-19 với Master SKU chưa khai báo tồn, ticket 10 của map kiến trúc G0–G1)
+- Phiên bản: 1.2
+- Ngày: 2026-11-13 (1.2: F1.1a xác minh email bằng link, BR-02 viết theo cách đếm của Keycloak, ticket 05 của map kiến trúc G0–G1; 1.1: BR-19 với Master SKU chưa khai báo tồn, ticket 10 của map kiến trúc G0–G1)
 - Trạng thái: Đã chốt cho P0
 - Liên quan: [Project Charter](../project-charter.md) · [Glossary](../GLOSSARY.md) · [Domain model](domain-model.md) · [Luồng người dùng](user-flows.md) · [Ma trận truy vết](traceability.md) · [Kỹ thuật áp dụng](../requirements-and-techniques.md)
 
@@ -99,11 +99,11 @@ Bảng quyền chi tiết ở F1.2a.
 - Người dùng đăng ký bằng email và mật khẩu, và phải tick đồng ý chính sách xử lý dữ liệu cá nhân (Nghị định 13/2023). Thời điểm đồng ý và phiên bản chính sách được lưu lại.
 - **BR-01:** Email là định danh duy nhất của Account trên toàn hệ thống, so sánh không phân biệt hoa thường và bỏ khoảng trắng hai đầu.
 - Mật khẩu tối thiểu 10 ký tự, và không được nằm trong danh sách mật khẩu phổ biến.
-- Email được xác minh bằng mã OTP 6 chữ số, hiệu lực 10 phút, gửi lại tối đa 5 lần mỗi giờ. Account chưa xác minh đăng nhập được nhưng không tạo được Workspace và không chấp nhận được lời mời.
+- Email được xác minh bằng link, hiệu lực 10 phút. Gửi lại được sau tối thiểu 60 giây kể từ lần gửi trước. Account chưa xác minh đăng nhập được nhưng không tạo được Workspace và không chấp nhận được lời mời. (1.2: đổi từ mã OTP 6 chữ số sang link, theo khả năng của Keycloak.)
 
 AC:
 - Given đã có Account `an@shop.vn`, When đăng ký bằng `AN@shop.vn `, Then bị từ chối với thông báo email đã được dùng.
-- Given OTP gửi lúc 10:00, When nhập đúng mã lúc 10:11, Then báo mã hết hạn và cho gửi lại.
+- Given link xác minh gửi lúc 10:00, When bấm link lúc 10:11, Then báo link hết hạn và cho gửi lại.
 
 Case kỹ thuật: OIDC với Keycloak (C9). Gửi email qua hàng đợi, có retry (C3).
 
@@ -111,7 +111,7 @@ Case kỹ thuật: OIDC với Keycloak (C9). Gửi email qua hàng đợi, có r
 
 - Đăng nhập bằng email và mật khẩu.
 - Quên mật khẩu: gửi link đặt lại qua email, link hiệu lực 30 phút và chỉ dùng một lần. Đặt lại mật khẩu xong thì mọi phiên đăng nhập khác bị đăng xuất.
-- **BR-02:** Sai mật khẩu 5 lần liên tiếp trong 15 phút thì Account bị khóa đăng nhập 15 phút.
+- **BR-02:** Sai mật khẩu 5 lần liên tiếp, mỗi lần cách lần trước không quá 15 phút, thì Account bị khóa đăng nhập 15 phút. Hai lần sai cách nhau dưới 1 giây thì phải chờ 1 phút. Đăng nhập đúng đưa bộ đếm về 0.
 
 AC: Given Account đang đăng nhập trên hai trình duyệt, When đặt lại mật khẩu ở trình duyệt thứ nhất, Then trình duyệt thứ hai bị đăng xuất ở request kế tiếp.
 
@@ -573,7 +573,7 @@ Thông tin phía sàn là **thuộc tính** của Package, không phải trạng
 | Mã | Tóm tắt | Ở |
 |---|---|---|
 | BR-01 | Email duy nhất toàn hệ thống, không phân biệt hoa thường | F1.1a |
-| BR-02 | Sai mật khẩu 5 lần trong 15 phút thì khóa 15 phút | F1.1b |
+| BR-02 | Sai mật khẩu 5 lần liên tiếp (cách nhau ≤ 15 phút) thì khóa 15 phút | F1.1b |
 | BR-03 | Tối đa 5 Workspace sở hữu mỗi Account | F1.1c |
 | BR-04 | Dữ liệu thuộc đúng một Workspace, cô lập tuyệt đối | F1.1c |
 | BR-05 | Xóa Workspace: xóa mềm, ngắt mọi Shop, xóa hẳn sau 30 ngày | F1.1e |

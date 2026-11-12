@@ -10,12 +10,12 @@ Thành phần sở hữu là đề xuất ban đầu và sẽ được chốt �
 
 | Yêu cầu | Sở hữu | Giai đoạn | NFR / SIM | Kỹ thuật trọng tâm | Thiết kế | Test | Trạng thái |
 |---|---|---|---|---|---|---|---|
-| F1.1a Đăng ký, xác minh | tenant, Keycloak | 1 | N11 | OIDC, gửi email qua hàng đợi | | | Chưa làm |
+| F1.1a Đăng ký, xác minh | tenant, Keycloak | 1 | N11 | OIDC; G1 Keycloak gửi email trực tiếp, hàng đợi email có retry (C3) sang G2 cùng notification | | | Chưa làm |
 | F1.1b Đăng nhập, quên mật khẩu | Keycloak | 1 | | OIDC, chống brute force | | | Chưa làm |
 | F1.1c Tạo và chuyển Workspace | tenant, gateway | 1 | N11 | Multi-tenancy, RLS | | | Chưa làm |
 | F1.1d Mời Member | tenant, notification | 2 | | Token mời, email | | | Chưa làm |
 | F1.1e Xóa Workspace, Account | tenant, mọi service | 4 | N14 | Xóa phân tán theo event | | | Chưa làm |
-| F1.2a–b Vai trò, phạm vi | tenant, mọi service | 1 | | Phân quyền theo phạm vi | | | Chưa làm |
+| F1.2a–b Vai trò, phạm vi | tenant, mọi service | 1 | | Phân quyền theo phạm vi; Member nhân bản qua Kafka ([ADR-0008](../adr/0008-keycloak-authn-only-members-replicated-via-kafka.md)). G1 chỉ có Owner qua giao diện, Member khác tạo bằng fixture của test (lời mời ở G2) | | | Chưa làm |
 | F1.2c Thu hồi quyền ngay | gateway, notification | 3 | | Thu hồi JWT, đóng SSE | | | Chưa làm |
 | F2.1a Kết nối OAuth | channel-connector | 1 | SIM-04 | OAuth code flow, idempotent callback | | | Chưa làm |
 | F2.2a Làm mới token | channel-connector | 3 | SIM-05 | Single-flight, distributed lock | | | Chưa làm |

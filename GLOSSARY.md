@@ -13,8 +13,16 @@ Không gian làm việc của một nhà bán, đồng thời là ranh giới c�
 _Avoid_: Tenant (chỉ dùng khi nói về kiến trúc multi-tenant), organization, company, store
 
 **Member**:
-Một Account tham gia một Workspace với một vai trò. Một Account có thể là Member của nhiều Workspace.
-_Avoid_: Employee, staff, user
+Một Account tham gia một Workspace với một hoặc nhiều Role. Một Account có thể là Member của nhiều Workspace.
+_Avoid_: Membership, employee, staff, user
+
+**Role**:
+Vai trò cố định mà một Member giữ trong Workspace, quyết định Member được làm gì: Owner, Quản lý, Vận hành, Kho, Kế toán.
+_Avoid_: Permission (một Role gồm nhiều quyền), group
+
+**Scope**:
+Phạm vi một Role của Member áp dụng: Vận hành áp dụng cho mọi Shop hoặc một danh sách Shop, Kho áp dụng cho mọi Warehouse hoặc một danh sách Warehouse. Ngoài Scope, Member không thấy dữ liệu.
+_Avoid_: Quyền hạn, phân vùng
 
 **Owner**:
 Member đã tạo Workspace, có toàn quyền trên Workspace đó. Mỗi Workspace có đúng một Owner, và Owner không bao giờ đổi.

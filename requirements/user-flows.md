@@ -7,8 +7,8 @@
 
 | # | Người dùng làm | Hệ thống làm | Yêu cầu |
 |---|---|---|---|
-| 1 | Đăng ký bằng email và mật khẩu, tick đồng ý chính sách | Gửi OTP | F1.1a |
-| 2 | Nhập OTP | Xác minh Account | F1.1a |
+| 1 | Đăng ký bằng email và mật khẩu, tick đồng ý chính sách | Gửi email có link xác minh | F1.1a |
+| 2 | Bấm link xác minh trong email | Xác minh Account | F1.1a |
 | 3 | Tạo Workspace "Shop Áo Nhà An" | Tạo Workspace, Warehouse mặc định, gán Owner | F1.1c, BR-17 |
 | 4 | Bấm "Kết nối Shopee", đồng ý trên trang của sàn | Đổi mã lấy token, Shop `Active`, bắt đầu job kéo dữ liệu, hiện tiến độ | F2.1a, F2.4a |
 | 5 | Kết nối thêm một shop TikTok | Như trên | F2.1a |
