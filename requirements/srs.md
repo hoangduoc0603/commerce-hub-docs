@@ -1,7 +1,7 @@
 # commerce-hub: Đặc tả yêu cầu phần mềm (SRS)
 
-- Phiên bản: 1.2
-- Ngày: 2026-11-13 (1.2: F1.1a xác minh email bằng link, BR-02 viết theo cách đếm của Keycloak, ticket 05 của map kiến trúc G0–G1; 1.1: BR-19 với Master SKU chưa khai báo tồn, ticket 10 của map kiến trúc G0–G1)
+- Phiên bản: 1.3
+- Ngày: 2026-11-13 (1.3: BR-17 Warehouse mặc định do inventory tạo khi lần đầu cần, F4.1b thêm lý do hệ thống "Lấy từ sàn", ticket 09 của map kiến trúc G0–G1; 1.2: F1.1a xác minh email bằng link, BR-02 viết theo cách đếm của Keycloak, ticket 05 của map kiến trúc G0–G1; 1.1: BR-19 với Master SKU chưa khai báo tồn, ticket 10 của map kiến trúc G0–G1)
 - Trạng thái: Đã chốt cho P0
 - Liên quan: [Project Charter](../project-charter.md) · [Glossary](../GLOSSARY.md) · [Domain model](domain-model.md) · [Luồng người dùng](user-flows.md) · [Ma trận truy vết](traceability.md) · [Kỹ thuật áp dụng](../requirements-and-techniques.md)
 
@@ -296,7 +296,7 @@ AC: Given Listing ở Shopee `seller_sku="AO-01"` có tồn 12, Listing ở TikT
 
 #### F4.1a Tính Available
 
-- **BR-17:** Mọi con số tồn kho tính theo cặp (Master SKU, Warehouse). Ở P0 mỗi Workspace có một Warehouse mặc định, tạo cùng lúc với Workspace.
+- **BR-17:** Mọi con số tồn kho tính theo cặp (Master SKU, Warehouse). Ở P0 mỗi Workspace luôn có đúng một Warehouse mặc định. Người dùng không tạo hay xóa nó; hệ thống tạo nó khi lần đầu cần tới (khai báo tồn hoặc giữ tồn đầu tiên của Workspace). Người dùng không phân biệt được với việc tạo cùng lúc với Workspace, và cách này không cần thêm contract nào ([ticket 09](../.scratch/architecture-g0-g1/issues/09-g1-contracts.md#answer)).
 - Available = On hand − Reservation − safety stock. Ở P0 safety stock bằng 0 (F4.6 là P1).
 - Available được phép âm (BR-19).
 
@@ -305,7 +305,7 @@ AC: Given Listing ở Shopee `seller_sku="AO-01"` có tồn 12, Listing ở TikT
 - Có hai thao tác:
   - "Đặt số tồn": nhập số On hand thực tế.
   - "Điều chỉnh": cộng hoặc trừ một lượng.
-  Cả hai đều bắt buộc chọn lý do (kiểm kê, nhập hàng, hư hỏng, khác) và có ghi chú tùy chọn.
+  Cả hai đều bắt buộc chọn lý do (kiểm kê, nhập hàng, hư hỏng, khác) và có ghi chú tùy chọn. Lý do thứ năm, "Lấy từ sàn", chỉ hệ thống dùng khi khai báo tồn ở F3.3c; người dùng không chọn được.
 - **BR-21:** Master SKU chỉ được coi là **đã khai báo tồn** sau lần "Đặt số tồn" hoặc "Điều chỉnh" đầu tiên, hoặc sau khi lấy tồn từ sàn ở F3.3c. Khai báo bằng 0 cũng tính. Hệ thống không bao giờ đẩy tồn cho Master SKU chưa khai báo.
 - "Đặt số tồn" phải gắn với số On hand người dùng nhìn thấy lúc mở màn hình. Nếu trong lúc đó có đơn làm On hand thay đổi, hệ thống báo cho người dùng và không ghi đè im lặng.
 

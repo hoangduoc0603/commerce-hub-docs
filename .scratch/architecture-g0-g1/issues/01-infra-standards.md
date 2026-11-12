@@ -19,7 +19,7 @@ Xong 2026-11-12: đủ 9 file trong [`docs/standards/`](../../../standards/), m�
 - CI vào registry lab: GitHub-hosted runner + `tailscale/github-action` → ticket 15 ([ci-cd.md](../../../standards/ci-cd.md))
 - Schema Registry: Apicurio 3.3 + serializer Confluent, `TopicRecordNameStrategy`, `BACKWARD_TRANSITIVE` (lệch với `BACKWARD` trong `contracts/README.md`) → ticket 09 ([kafka.md](../../../standards/kafka.md))
 - Instrument bằng Micrometer + OTLP, không dùng OTel Java agent ([observability.md](../../../standards/observability.md))
-- Một realm, Keycloak chỉ xác thực Account; Workspace/Member/vai trò ở `tenant`, Workspace truyền bằng header → ticket 05 ([keycloak.md](../../../standards/keycloak.md))
+- Một realm, Keycloak chỉ xác thực Account; Workspace/Member/vai trò ở `workspace`, Workspace truyền bằng header → ticket 05 ([keycloak.md](../../../standards/keycloak.md))
 - Next.js theo mẫu BFF (confidential client, PKCE) → ticket 07
 - Gradle, chart dùng chung tên `application` → ticket 11
 

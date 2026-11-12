@@ -10,14 +10,14 @@ _Avoid_: User (khi muốn nói danh tính), login
 
 **Workspace**:
 Không gian làm việc của một nhà bán, đồng thời là ranh giới cô lập dữ liệu duy nhất. Mọi Shop, Warehouse, Master SKU, Order đều thuộc đúng một Workspace.
-_Avoid_: Tenant (chỉ dùng khi nói về kiến trúc multi-tenant), organization, company, store
+_Avoid_: Tenant, kể cả trong định danh code (`workspace_id`, `workspaceId`, service `workspace`); chỉ giữ trong từ ghép kiến trúc như multi-tenant, multi-tenancy. Cũng tránh organization, company, store
 
 **Member**:
 Một Account tham gia một Workspace với một hoặc nhiều Role. Một Account có thể là Member của nhiều Workspace.
 _Avoid_: Membership, employee, staff, user
 
 **Role**:
-Vai trò cố định mà một Member giữ trong Workspace, quyết định Member được làm gì: Owner, Quản lý, Vận hành, Kho, Kế toán.
+Vai trò cố định mà một Member giữ trong Workspace, quyết định Member được làm gì: Owner (`OWNER`), Quản lý (`MANAGER`), Vận hành (`OPERATOR`), Kho (`WAREHOUSE_KEEPER`), Kế toán (`ACCOUNTANT`). Tên trong ngoặc là định danh dùng trong code và contract.
 _Avoid_: Permission (một Role gồm nhiều quyền), group
 
 **Scope**:

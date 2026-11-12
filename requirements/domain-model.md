@@ -1,6 +1,6 @@
 # commerce-hub: Domain model (mức khái niệm)
 
-- Phiên bản: 1.1, ngày 2026-11-13 (1.1: OrderInventoryState và ranh giới nhất quán của inventory, theo [ADR-0007](../adr/0007-stock-balance-plus-ledger-in-one-transaction.md))
+- Phiên bản: 1.2, ngày 2026-11-13 (1.2: một OrderLine cho mỗi (Order, Listing), trạng thái canonical của Listing, ID tất định theo [ADR-0009](../adr/0009-deterministic-ids-for-marketplace-entities.md); 1.1: OrderInventoryState và ranh giới nhất quán của inventory, theo [ADR-0007](../adr/0007-stock-balance-plus-ledger-in-one-transaction.md))
 - Phạm vi: P0. Tên thực thể theo [GLOSSARY.md](../GLOSSARY.md). Quy tắc theo mã BR trong [SRS](srs.md).
 
 Tài liệu này mô tả **khái niệm và quan hệ**, chưa phải schema. Kiểu dữ liệu, bảng và index được quyết định ở phase thiết kế, trong từng service.
@@ -68,14 +68,14 @@ Ranh giới context đi theo [B1](../requirements-and-techniques.md#b1-bounded-c
 | Thực thể | Thuộc tính chính | Bất biến |
 |---|---|---|
 | **MasterSku** | mã SKU, tên, giá vốn, mã vạch, ảnh, trạng thái | Mã duy nhất trong Workspace (BR-13) |
-| **Listing** | Shop, mã sản phẩm và biến thể trên sàn, `seller_sku`, tên, giá, trạng thái trên sàn, tồn trên sàn lần cuối, trạng thái đồng bộ | (Shop, mã biến thể trên sàn) là duy nhất |
+| **Listing** | Shop, mã sản phẩm và biến thể trên sàn, `seller_sku`, tên, giá, trạng thái trên sàn (`Active`, `Inactive`, `Removed`, kèm trạng thái gốc), tồn trên sàn lần cuối, trạng thái đồng bộ | (Shop, mã sản phẩm, mã biến thể trên sàn) là duy nhất. ID tất định từ khóa này (ADR-0009) |
 | **Mapping** | Listing → MasterSku | Một Listing có tối đa một Mapping (BR-15) |
 
 ### Inventory
 
 | Thực thể | Thuộc tính chính | Bất biến |
 |---|---|---|
-| **Warehouse** | Workspace, tên, là kho mặc định | P0: mỗi Workspace có đúng một Warehouse |
+| **Warehouse** | Workspace, tên, là kho mặc định | P0: mỗi Workspace có đúng một Warehouse, tạo khi lần đầu cần, ID tất định từ Workspace (BR-17, ADR-0009) |
 | **StockItem** | (MasterSku, Warehouse), On hand, tổng Reservation, đã khai báo tồn hay chưa | Số dư bằng tổng LedgerEntry (BR-29). Available có thể âm |
 | **Reservation** | StockItem, dòng đơn, số lượng, trạng thái (`Open`, `Released`, `Consumed`) | Mỗi dòng đơn có tối đa một Reservation `Open` (BR-20). Dòng ghép lại sang SKU khác có thêm một Reservation `Released` cũ |
 | **LedgerEntry** | StockItem, thời điểm, thay đổi On hand, thay đổi Reservation, loại lý do, tham chiếu, người thực hiện, khóa idempotency (lệnh REST), có gây Oversell hay không | Chỉ thêm, không sửa hay xóa (BR-28) |
@@ -88,7 +88,7 @@ Published stock không phải thực thể được lưu trữ: nó được tí
 | Thực thể | Thuộc tính chính | Bất biến |
 |---|---|---|
 | **Order** | Shop, mã đơn của sàn, trạng thái chuẩn hóa, trạng thái gốc, `update_time` của sàn, các cờ (Short order, có Unmapped line, có yêu cầu hủy, đang chờ sàn hủy), người nhận (thông tin cá nhân), tổng tiền, tiền tệ, COD hay không | (Shop, mã đơn) là duy nhất (BR-32). Không chấp nhận `update_time` cũ hơn giá trị đang lưu (BR-31) |
-| **OrderLine** | Listing, Master SKU (nếu đã ghép), số lượng, số lượng đã hủy, đơn giá | Số lượng đã hủy ≤ số lượng |
+| **OrderLine** | Listing, Master SKU (nếu đã ghép), số lượng, số lượng đã hủy, thành tiền, tên lúc đặt | Mỗi (Order, Listing) có tối đa một OrderLine: các dòng gốc của sàn cùng Listing được gộp. Số lượng đã hủy ≤ số lượng |
 | **OrderStatusChange** | trạng thái cũ và mới (gốc và chuẩn hóa), thời điểm, nguồn (webhook, đối soát, kéo bù, thao tác người dùng) | Chỉ thêm |
 
 ### Fulfillment

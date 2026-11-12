@@ -49,4 +49,4 @@ Chốt ngày 2026-11-12 (người dùng), sau ba vòng grilling. Chọn **Kafka 
 - Cách đo dual-write ở G2 (failpoint giữa commit và gửi, bộ đếm Reservation thiếu): ngoài đích của map.
 
 ## Comments
-- 2026-11-13: Từ ticket [05 Mô hình danh tính và Workspace trong token](05-identity-model.md#answer): `tenant` là service thứ tư cố ý dual-write theo ADR-0005 (phát event Member), kèm lệnh phát lại trạng thái của một Workspace ([ADR-0008](../../../adr/0008-keycloak-authn-only-members-replicated-via-kafka.md)).
+- 2026-11-13: Từ ticket [05 Mô hình danh tính và Workspace trong token](05-identity-model.md#answer): `workspace` là service thứ tư cố ý dual-write theo ADR-0005 (phát event Member), kèm lệnh phát lại trạng thái của một Workspace ([ADR-0008](../../../adr/0008-keycloak-authn-only-members-replicated-via-kafka.md)).

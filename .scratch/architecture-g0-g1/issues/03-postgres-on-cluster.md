@@ -17,7 +17,7 @@ Chạy PostgreSQL 17+ trên cụm kubeadm 1.37 (3 node, local-path-provisioner, 
 Đầu vào: [`docs/standards/db-migration.md`](../../../standards/db-migration.md), [homelab](../../../../platform/docs/homelab-hyperv.md).
 
 ## Comments
-- 2026-11-12: Research xong, xem [docs/research/2026-11-postgres-on-cluster.md](../../../research/2026-11-postgres-on-cluster.md). Đề xuất: CloudNativePG 1.30.1 + PG 18, một `Cluster` 2 instance dùng chung (mỗi service một `Database` + 3 role, lệch khuyến nghị "một DB mỗi cluster" của CNPG, nên viết ADR), sync `ANY 1` `preferred`. Backup bằng plugin Barman Cloud (cần cert-manager) lên RustFS trên `gw` (MinIO đã archived), `archive_timeout: 1min` cho N10. Pooler PgBouncer `transaction` cho runtime với tenant context bằng `set_config(..., true)`; Flyway và Keycloak nối thẳng `-rw`. "Mâu thuẫn" owner/RLS được chính FAQ CNPG giải: user riêng cho đọc ghi. Lưu ý: K8s 1.37 mới ở mức "tested, not supported" với CNPG 1.30.
+- 2026-11-12: Research xong, xem [docs/research/2026-11-postgres-on-cluster.md](../../../research/2026-11-postgres-on-cluster.md). Đề xuất: CloudNativePG 1.30.1 + PG 18, một `Cluster` 2 instance dùng chung (mỗi service một `Database` + 3 role, lệch khuyến nghị "một DB mỗi cluster" của CNPG, nên viết ADR), sync `ANY 1` `preferred`. Backup bằng plugin Barman Cloud (cần cert-manager) lên RustFS trên `gw` (MinIO đã archived), `archive_timeout: 1min` cho N10. Pooler PgBouncer `transaction` cho runtime với Workspace context bằng `set_config(..., true)`; Flyway và Keycloak nối thẳng `-rw`. "Mâu thuẫn" owner/RLS được chính FAQ CNPG giải: user riêng cho đọc ghi. Lưu ý: K8s 1.37 mới ở mức "tested, not supported" với CNPG 1.30.
 
 ## Answer
 
@@ -26,8 +26,8 @@ Chốt 2026-11-12 (người dùng duyệt đề xuất của [tra cứu](../../.
 - **Topology:** một `Cluster` `pg-main` dùng chung, mỗi service một `Database` + 3 role → [ADR-0003](../../../adr/0003-shared-postgres-cluster.md).
 - **HA:** 2 instance, anti-affinity `required`, đồng bộ `ANY 1` với `dataDurability: preferred`, requests = limits.
 - **Backup:** plugin Barman Cloud v0.16.0 (cần cert-manager), đích RustFS trên VM `gw`, `archive_timeout: 1min` (N10), `ScheduledBackup` hằng ngày, giữ 14 ngày; diễn tập PITR ra cluster mới và đo RTO.
-- **Pooling:** `Pooler` PgBouncer `transaction` cho runtime; tenant context chỉ đặt bằng `set_config(..., true)` trong transaction. Job Flyway và Keycloak nối thẳng `pg-main-rw`.
+- **Pooling:** `Pooler` PgBouncer `transaction` cho runtime; Workspace context chỉ đặt bằng `set_config(..., true)` trong transaction. Job Flyway và Keycloak nối thẳng `pg-main-rw`.
 - **Role và RLS:** giữ 3 role owner/migrator/app và `FORCE ROW LEVEL SECURITY`; không có mâu thuẫn với CNPG (owner bảng mới bỏ qua RLS, FAQ của CNPG cũng khuyên user riêng). Khai báo role bằng `DatabaseRole` trong app `platform`.
 
-Phần phân quyền + tenant context để ticket 06 chốt trong ADR multi-tenancy. Phụ thuộc mới (cert-manager, RustFS trên `gw`, pod Pooler, sidecar Barman) chuyển sang ticket 04.
+Phần phân quyền + Workspace context để ticket 06 chốt trong ADR multi-tenancy. Phụ thuộc mới (cert-manager, RustFS trên `gw`, pod Pooler, sidecar Barman) chuyển sang ticket 04.
 - 2026-11-12: Ticket [04 Ngân sách tài nguyên home lab](04-resource-budget.md#answer) sửa một ý của Answer trên: ở lab, `pg-main` chạy **1 instance** mặc định ([ADR-0004](../../../adr/0004-single-instance-by-default-on-homelab.md)). Chỉ dựng instance thứ hai khi làm thí nghiệm failover. Pooler cũng còn 1 pod. Còn lại giữ nguyên. Với 1 instance, PDB của CNPG có thể chặn drain node; cách xử lý **chưa xác minh**.

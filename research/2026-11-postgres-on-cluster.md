@@ -1,6 +1,6 @@
 # PostgreSQL trên cụm home lab (operator, topology, HA, backup, pooling, RLS)
 
-Tra cứu ngày 12/11/2026 cho ticket [03 PostgreSQL trên cụm home lab](../.scratch/architecture-g0-g1/issues/03-postgres-on-cluster.md). Bối cảnh: cụm kubeadm Kubernetes 1.37, 3 node (control plane nhận pod), `local-path-provisioner` v0.0.37, ngân sách khoảng 2 GB RAM cho PostgreSQL ([homelab](../../platform/docs/homelab-hyperv.md#chia-tài-nguyên-32-gb-ram-20-luồng)). Ở G1 có 5 service có DB (tenant, channel-connector, catalog, inventory, order), cộng Keycloak và có thể `shopee-sim`.
+Tra cứu ngày 12/11/2026 cho ticket [03 PostgreSQL trên cụm home lab](../.scratch/architecture-g0-g1/issues/03-postgres-on-cluster.md). Bối cảnh: cụm kubeadm Kubernetes 1.37, 3 node (control plane nhận pod), `local-path-provisioner` v0.0.37, ngân sách khoảng 2 GB RAM cho PostgreSQL ([homelab](../../platform/docs/homelab-hyperv.md#chia-tài-nguyên-32-gb-ram-20-luồng)). Ở G1 có 5 service có DB (workspace, channel-connector, catalog, inventory, order), cộng Keycloak và có thể `shopee-sim`.
 
 Tài liệu CloudNativePG được đọc từ mã nguồn docs ở tag `v1.30.1` (`github.com/cloudnative-pg/cloudnative-pg/tree/v1.30.1/docs/src`), nội dung giống trang `cloudnative-pg.io/docs/1.30/`. Plugin Barman Cloud đọc ở tag `v0.16.0`. Thông tin phiên bản lấy từ GitHub Releases API.
 
@@ -12,7 +12,7 @@ Nhãn: **[CT]** tài liệu hoặc mã nguồn chính thức · **[CXM]** chưa 
 - **Topology:** một `Cluster` dùng chung, mỗi service một database và bộ role riêng. Docs CloudNativePG khuyên mỗi microservice một cluster. Ở lab ta lệch khuyến nghị này vì RAM, nên cần ghi ADR.
 - **HA:** 2 instance, anti-affinity `required`, synchronous `ANY 1` với `dataDurability: preferred`. Với `local-path`, node chết thì instance trên node đó kẹt cho tới khi node quay lại. Muốn dựng lại ở node khác phải `kubectl cnpg destroy` bằng tay.
 - **Backup:** dùng plugin Barman Cloud (cách in-tree sẽ bị gỡ ở 1.31; plugin cần cert-manager) đẩy WAL và base backup lên object store S3-compatible chạy trên VM `gw`. MinIO community đã ngừng bảo trì, nên dùng RustFS. Đặt `archive_timeout = 1min` để đạt RPO ≤ 1 phút (N10). Khôi phục luôn ra một cluster mới.
-- **Pooling:** Pooler PgBouncer ở chế độ `transaction` cho traffic runtime. Tenant context đặt bằng `SET LOCAL` hoặc `set_config(..., true)`. Job Flyway và Keycloak nối thẳng `<cluster>-rw`, vì advisory lock kiểu session và lệnh `SET` không dùng được qua transaction pooling.
+- **Pooling:** Pooler PgBouncer ở chế độ `transaction` cho traffic runtime. Workspace context đặt bằng `SET LOCAL` hoặc `set_config(..., true)`. Job Flyway và Keycloak nối thẳng `<cluster>-rw`, vì advisory lock kiểu session và lệnh `SET` không dùng được qua transaction pooling.
 - **Owner và RLS:** thực ra docs CloudNativePG không mâu thuẫn với cách tách role. Bootstrap nói "app kết nối bằng owner", nhưng FAQ khuyên tạo thêm user đọc ghi và `GRANT`. Giữ 3 role owner/migrator/app như [db-migration.md](../standards/db-migration.md), không dùng `app` mặc định cho runtime.
 
 ---
@@ -189,9 +189,9 @@ Bảng tương thích chính thức [CT, [PgBouncer – Features](https://www.pg
 
 - Ở chế độ `transaction`, server connection trả về pool khi transaction kết thúc. `server_reset_query` (mặc định `DISCARD ALL`) **không chạy** ở chế độ này. `max_prepared_statements` mặc định 200. Lệnh `SET` trên tham số mà PostgreSQL không báo về client thì **có thể rò sang client khác**, trừ khi bật `server_reset_query_always` [CT, [PgBouncer – Config](https://www.pgbouncer.org/config.html)]. Bản PgBouncer mới nhất là 1.26.1 (14/10/2026) [CT, GitHub Releases]. CNPG cần PgBouncer ≥ 1.19 [CT].
 - **`SET LOCAL` và `set_config(name, value, is_local => true)`** chỉ có hiệu lực tới hết transaction hiện tại, dù commit hay rollback [CT, [PG 18 – SET](https://www.postgresql.org/docs/18/sql-set.html), [PG 18 – Admin functions](https://www.postgresql.org/docs/18/functions-admin.html)]. Vì vậy chúng **an toàn** với transaction pooling: transaction nằm trọn trên một server connection, và giá trị mất khi connection quay về pool. Bảng của PgBouncer không có dòng `SET LOCAL`; kết luận này suy ra từ ngữ nghĩa của PostgreSQL [SL].
-- Tên tham số tự đặt phải có hai phần, kiểu `app.tenant_id` [CT, [PG 18 – Customized options](https://www.postgresql.org/docs/18/runtime-config-custom.html)]. Policy đọc bằng `current_setting('app.tenant_id', true)`; khi chưa đặt thì trả về `NULL` thay vì báo lỗi, nên policy so sánh với `NULL` sẽ trả 0 dòng (fail closed) [CT cho `missing_ok`, [PG 18 – Admin functions](https://www.postgresql.org/docs/18/functions-admin.html)].
+- Tên tham số tự đặt phải có hai phần, kiểu `app.workspace_id` [CT, [PG 18 – Customized options](https://www.postgresql.org/docs/18/runtime-config-custom.html)]. Policy đọc bằng `current_setting('app.workspace_id', true)`; khi chưa đặt thì trả về `NULL` thay vì báo lỗi, nên policy so sánh với `NULL` sẽ trả 0 dòng (fail closed) [CT cho `missing_ok`, [PG 18 – Admin functions](https://www.postgresql.org/docs/18/functions-admin.html)].
 
-**Quy tắc cho code [SL]:** tenant context **chỉ** đặt bằng `set_config('app.tenant_id', :id, true)` ở đầu mỗi transaction, trong cùng transaction với truy vấn. Không bao giờ dùng `SET` thường. Quy tắc này đúng cả khi không có PgBouncer: HikariCP cũng tái dùng connection giữa các request, nên `SET` kiểu session cũng rò giữa các tenant. Cần một test tích hợp chứng minh request của Workspace B, chạy trên connection vừa phục vụ Workspace A, thấy 0 dòng của A (BR-04, N11).
+**Quy tắc cho code [SL]:** Workspace context **chỉ** đặt bằng `set_config('app.workspace_id', :id, true)` ở đầu mỗi transaction, trong cùng transaction với truy vấn. Không bao giờ dùng `SET` thường. Quy tắc này đúng cả khi không có PgBouncer: HikariCP cũng tái dùng connection giữa các request, nên `SET` kiểu session cũng rò giữa các Workspace. Cần một test tích hợp chứng minh request của Workspace B, chạy trên connection vừa phục vụ Workspace A, thấy 0 dòng của A (BR-04, N11).
 
 ### 5.2 Flyway
 
@@ -233,7 +233,7 @@ Bảng tương thích chính thức [CT, [PgBouncer – Features](https://www.pg
    - `<svc>_app`: LOGIN, chỉ DML.
    - Không role nào có `superuser` hay `bypassrls`.
 2. Bootstrap của `Cluster` vẫn bắt buộc tạo một database và owner (mặc định `app`). Đặt nó thành database của một service, hoặc để `app` không dùng tới. Không đưa Secret `<cluster>-app` cho service nào [SL].
-3. Migration bật `ENABLE` + `FORCE ROW LEVEL SECURITY` để có thêm lớp chặn khi lỡ chạy bằng owner. Hệ quả [CT, PG docs]: khi đã `FORCE`, backfill chạy bằng owner cũng **bị policy lọc**. Backfill phải tự đặt `app.tenant_id` theo từng tenant, hoặc dùng policy riêng cho role migrator; quyết định khi viết spec.
+3. Migration bật `ENABLE` + `FORCE ROW LEVEL SECURITY` để có thêm lớp chặn khi lỡ chạy bằng owner. Hệ quả [CT, PG docs]: khi đã `FORCE`, backfill chạy bằng owner cũng **bị policy lọc**. Backfill phải tự đặt `app.workspace_id` theo từng Workspace, hoặc dùng policy riêng cho role migrator; quyết định khi viết spec.
 4. `<svc>_migrator` là thành viên của owner. Với `INHERIT` (mặc định), nó có được coi là "owner" khi xét RLS hay không: **[CXM]**. Đã có `SET ROLE <svc>_owner` cộng `FORCE` thì kết quả như nhau.
 
 ## 7. Monitoring
@@ -276,7 +276,7 @@ Bảng tương thích chính thức [CT, [PgBouncer – Features](https://www.pg
 | HA | `instances: 2`, `podAntiAffinityType: required`, `synchronous: {method: any, number: 1, dataDurability: preferred}`, PDB bật, resources `requests = limits` (QoS Guaranteed, docs khuyên) | 3 instance (RAM); `required` durability (2 instance thì dừng ghi khi mất một node) | Mất một node vẫn ghi được, RPO = 0 khi cả hai khỏe |
 | Backup | Plugin Barman Cloud v0.16.0 cùng cert-manager. `ObjectStore` trỏ tới **RustFS trên `gw`**, WAL nén, `archive_timeout: 1min`, `ScheduledBackup` hằng ngày, `retentionPolicy: "14d"` (số ngày [SL]) | In-tree `barmanObjectStore` (gỡ ở 1.31); volume snapshot (`local-path` không có); MinIO (archived); `pg_dump` (docs: không dùng được cho business continuity) | N10 (RPO ≤ 1 phút). Ghi lệch chuẩn: đích backup cùng máy vật lý |
 | Diễn tập | Runbook PITR ra cluster mới (mục 4.3), đo RTO và RPO, ghi `docs/experiments/` | — | N10 bắt buộc diễn tập |
-| Pooling | `Pooler` `pg-main-pooler-rw`, `poolMode: transaction`, 2 pod, cho runtime. Job Flyway và Keycloak nối thẳng `pg-main-rw` | Không pooler (pod runtime và surge khi rollout dễ vượt `max_connections` 100); pooler `session` (không giảm số connection) | Tenant context **bắt buộc** `set_config(..., true)` trong transaction, có test rò tenant |
+| Pooling | `Pooler` `pg-main-pooler-rw`, `poolMode: transaction`, 2 pod, cho runtime. Job Flyway và Keycloak nối thẳng `pg-main-rw` | Không pooler (pod runtime và surge khi rollout dễ vượt `max_connections` 100); pooler `session` (không giảm số connection) | Workspace context **bắt buộc** `set_config(..., true)` trong transaction, có test rò Workspace |
 | Role và RLS | 3 role `<svc>_owner`/`_migrator`/`_app` như db-migration.md; không dùng user `app` của bootstrap cho runtime; `FORCE ROW LEVEL SECURITY` | App dùng owner | Khớp FAQ của CNPG; owner bảng bỏ qua RLS |
 | Khai báo role | `DatabaseRole` trong app `platform` (namespace `postgres`); Argo CD self-heal bù việc `DatabaseRole` không tự sửa drift | `managed.roles` (một CR `Cluster` to, mọi đổi role chạm vào Cluster) | Quyền ghi CR này tương đương superuser, nên chỉ project `platform` được ghi |
 | Monitoring | `PodMonitor` tự viết cho `Cluster` và `Pooler`, dashboard chính thức, `PrometheusRule` mẫu cộng alert backup từ metric plugin | `enablePodMonitor` (deprecated) | |
@@ -292,7 +292,7 @@ Cần cập nhật sau khi chốt (thuộc spec, không làm trong ticket này):
 ## Nên viết ADR
 
 1. **Một cluster PostgreSQL dùng chung cho mọi service (lệch khuyến nghị của CNPG).** Đây là trade-off thật: RAM đổi lấy cô lập, PITR riêng và nâng cấp riêng. Đảo ngược thì tốn công (tách database ra cluster mới). Ghi điều kiện để tách, ví dụ khi nâng RAM lên 64 GB hoặc khi một service cần PITR riêng.
-2. **Phân quyền DB 3 role và tenant context bằng `SET LOCAL` qua PgBouncer transaction.** Gộp vào ADR multi-tenancy (C8) mà db-migration.md đã gợi ý. Bối cảnh dễ gây bất ngờ: docs CNPG bảo dùng owner, và lệnh `SET` thường làm rò tenant khi đi qua pool.
+2. **Phân quyền DB 3 role và Workspace context bằng `SET LOCAL` qua PgBouncer transaction.** Gộp vào ADR multi-tenancy (C8) mà db-migration.md đã gợi ý. Bối cảnh dễ gây bất ngờ: docs CNPG bảo dùng owner, và lệnh `SET` thường làm rò Workspace khi đi qua pool.
 3. (Tùy chọn) **Đích backup trên `gw` cùng máy vật lý.** Có thể chỉ cần ghi trong standard như một lệch chuẩn, không cần ADR riêng.
 
 ## Nguồn

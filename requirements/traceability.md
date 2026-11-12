@@ -4,18 +4,18 @@
 - Nối mỗi yêu cầu P0 trong [SRS](srs.md) với: thành phần sở hữu (theo [B1](../requirements-and-techniques.md#b1-bounded-context-và-service)), giai đoạn làm (theo [C18](../requirements-and-techniques.md#c18-lộ-trình-gợi-ý)), yêu cầu phi chức năng và Simulator liên quan, và kỹ thuật trọng tâm.
 - Cột **Thiết kế**, **Test** và **Trạng thái** được điền khi làm từng increment. Cập nhật bảng này là một phần của Definition of Done ([Charter](../project-charter.md#5-mô-hình-phát-triển-sdlc)).
 
-Thành phần sở hữu là đề xuất ban đầu và sẽ được chốt ở phase thiết kế. Theo B1, giai đoạn đầu có thể gộp một số service, ví dụ `tenant` gộp vào gateway và Keycloak.
+Thành phần sở hữu là đề xuất ban đầu và sẽ được chốt ở phase thiết kế. Theo B1, giai đoạn đầu có thể gộp một số service, ví dụ `workspace` gộp vào gateway và Keycloak.
 
 ## 1. Yêu cầu chức năng
 
 | Yêu cầu | Sở hữu | Giai đoạn | NFR / SIM | Kỹ thuật trọng tâm | Thiết kế | Test | Trạng thái |
 |---|---|---|---|---|---|---|---|
-| F1.1a Đăng ký, xác minh | tenant, Keycloak | 1 | N11 | OIDC; G1 Keycloak gửi email trực tiếp, hàng đợi email có retry (C3) sang G2 cùng notification | | | Chưa làm |
+| F1.1a Đăng ký, xác minh | workspace, Keycloak | 1 | N11 | OIDC; G1 Keycloak gửi email trực tiếp, hàng đợi email có retry (C3) sang G2 cùng notification | | | Chưa làm |
 | F1.1b Đăng nhập, quên mật khẩu | Keycloak | 1 | | OIDC, chống brute force | | | Chưa làm |
-| F1.1c Tạo và chuyển Workspace | tenant, gateway | 1 | N11 | Multi-tenancy, RLS | | | Chưa làm |
-| F1.1d Mời Member | tenant, notification | 2 | | Token mời, email | | | Chưa làm |
-| F1.1e Xóa Workspace, Account | tenant, mọi service | 4 | N14 | Xóa phân tán theo event | | | Chưa làm |
-| F1.2a–b Vai trò, phạm vi | tenant, mọi service | 1 | | Phân quyền theo phạm vi; Member nhân bản qua Kafka ([ADR-0008](../adr/0008-keycloak-authn-only-members-replicated-via-kafka.md)). G1 chỉ có Owner qua giao diện, Member khác tạo bằng fixture của test (lời mời ở G2) | | | Chưa làm |
+| F1.1c Tạo và chuyển Workspace | workspace, gateway | 1 | N11 | Multi-tenancy, RLS | | | Chưa làm |
+| F1.1d Mời Member | workspace, notification | 2 | | Token mời, email | | | Chưa làm |
+| F1.1e Xóa Workspace, Account | workspace, mọi service | 4 | N14 | Xóa phân tán theo event | | | Chưa làm |
+| F1.2a–b Vai trò, phạm vi | workspace, mọi service | 1 | | Phân quyền theo phạm vi; Member nhân bản qua Kafka ([ADR-0008](../adr/0008-keycloak-authn-only-members-replicated-via-kafka.md)). G1 chỉ có Owner qua giao diện, Member khác tạo bằng fixture của test (lời mời ở G2) | | | Chưa làm |
 | F1.2c Thu hồi quyền ngay | gateway, notification | 3 | | Thu hồi JWT, đóng SSE | | | Chưa làm |
 | F2.1a Kết nối OAuth | channel-connector | 1 | SIM-04 | OAuth code flow, idempotent callback | | | Chưa làm |
 | F2.2a Làm mới token | channel-connector | 3 | SIM-05 | Single-flight, distributed lock | | | Chưa làm |
@@ -23,8 +23,8 @@ Thành phần sở hữu là đề xuất ban đầu và sẽ được chốt �
 | F2.3a Ngắt kết nối | channel-connector | 3 | SIM-17 | Hủy lệnh đang xếp hàng | | | Chưa làm |
 | F2.4a Kéo dữ liệu, kéo bù | channel-connector | 1 (cơ bản), 3 (đủ) | SIM-08, N7 | Job có checkpoint, hàng đợi ưu tiên, fairness | | | Chưa làm |
 | F3.1a Master SKU | catalog | 1 | N17 | Optimistic locking, tìm kiếm | | | Chưa làm |
-| F3.2a Kéo Listing | channel-connector, catalog | 1 | SIM-19 | ACL, upsert idempotent | | | Chưa làm |
-| F3.3a–b Ghép tự động, thủ công | catalog, inventory, order | 1 | | Event bù trừ giữa context | | | Chưa làm |
+| F3.2a Kéo Listing | channel-connector, catalog | 1 | SIM-19 | ACL, upsert idempotent | [ADR-0009](../adr/0009-deterministic-ids-for-marketplace-entities.md) | | Chưa làm |
+| F3.3a–b Ghép tự động, thủ công | catalog, inventory, order | 1 | | Event bù trừ giữa context | [ADR-0009](../adr/0009-deterministic-ids-for-marketplace-entities.md) | | Chưa làm |
 | F3.3c Tạo Master SKU hàng loạt | catalog, inventory | 1 | | Job, thành công một phần | | | Chưa làm |
 | F4.1a–b Available, khai báo tồn | inventory | 1 | | Atomic update, xung đột ghi | [ADR-0007](../adr/0007-stock-balance-plus-ledger-in-one-transaction.md) | | Chưa làm |
 | F4.1c Đẩy tồn | inventory, channel-connector | 2 | N3, N8, SIM-12, SIM-16 | Coalescing, thứ tự theo key, rate limit | | | Chưa làm |
@@ -36,12 +36,12 @@ Thành phần sở hữu là đề xuất ban đầu và sẽ được chốt �
 | F5.1a Danh sách đơn | order (+ read model) | 1 | N17 | Cursor, CQRS | | | Chưa làm |
 | F5.2a Webhook | webhook-ingress, channel-connector | 2 | N1, N2, N15, SIM-14, SIM-15 | HMAC, ghi bền rồi trả lời, dedupe, sai thứ tự | | | Chưa làm |
 | F5.2b Kéo bù đơn | channel-connector | 1 (poll), 3 (đối soát) | N4, SIM-08 | Cửa sổ chồng lấn, checkpoint | | | Chưa làm |
-| F5.2c Chuẩn hóa đơn | channel-connector, order | 1 | N13 | ACL, canonical model | | | Chưa làm |
+| F5.2c Chuẩn hóa đơn | channel-connector, order | 1 | N13 | ACL, canonical model | [ADR-0009](../adr/0009-deterministic-ids-for-marketplace-entities.md) | | Chưa làm |
 | F5.3a Chuẩn bị hàng | order, fulfillment | 4 | SIM-07 | Saga, state machine | | | Chưa làm |
 | F5.4a–b Hủy, yêu cầu hủy | order, channel-connector | 4 | SIM-09 | Lệnh idempotent, xác nhận bất đồng bộ | | | Chưa làm |
 | F6.1a–d Giao hàng qua sàn | fulfillment, channel-connector | 4 | SIM-13 | Job nhiều bước, object storage, idempotency | | | Chưa làm |
 | F10.1a Thông báo | notification | 2 | N17 | SSE, gộp theo cửa sổ, fan-out theo quyền | | | Chưa làm |
-| PA-1, PA-2, PA-4 Quản trị Workspace, sức khỏe Shop | tenant, channel-connector | 3 | | Phân tách quyền vận hành | | | Chưa làm |
+| PA-1, PA-2, PA-4 Quản trị Workspace, sức khỏe Shop | workspace, channel-connector | 3 | | Phân tách quyền vận hành | | | Chưa làm |
 | PA-3 Hàng đợi lỗi | mọi consumer | 2 | | Công cụ xem và replay DLT | | | Chưa làm |
 
 ## 2. Yêu cầu phi chức năng theo giai đoạn

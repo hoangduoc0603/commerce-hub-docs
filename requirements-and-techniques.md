@@ -101,7 +101,7 @@ Sơ đồ chuyển trạng thái chính xác của Shopee là ảnh trong tài l
 | Lấy danh sách đơn | `POST /order/202309/orders/search`, cursor `page_token`, tối đa 100/trang, lọc theo `update_time`. Tài liệu cảnh báo `update_time` có thể vượt khoảng tìm kiếm, nên **cửa sổ phải chồng lên nhau** | `get_order_list` chỉ trả `order_sn`, **khoảng thời gian tối đa 15 ngày**, cursor; sau đó `get_order_detail` tối đa **50 đơn/lần**. Từ 05/11/2026 có field `warning` khi hệ thống sàn quá tải |
 | Phiên bản API | Đặt tên YYYYMM, nằm trong path; bản cũ còn dùng ≥ 2 tháng sau khi có bản mới | v2 |
 
-**Hệ quả thiết kế:** rate limiter phân tán theo khóa (sàn, app, shop, nhóm endpoint). Hàng đợi có **độ ưu tiên** (xác nhận giao hàng > cập nhật tồn kho > đăng sản phẩm hàng loạt). **Fairness giữa các tenant**. Đồng bộ tăng dần với checkpoint và cửa sổ chồng lấn. Gom request theo batch (50 đơn, 50 model).
+**Hệ quả thiết kế:** rate limiter phân tán theo khóa (sàn, app, shop, nhóm endpoint). Hàng đợi có **độ ưu tiên** (xác nhận giao hàng > cập nhật tồn kho > đăng sản phẩm hàng loạt). **Fairness giữa các Workspace**. Đồng bộ tăng dần với checkpoint và cửa sổ chồng lấn. Gom request theo batch (50 đơn, 50 model).
 
 ## A3, A4. Yêu cầu chức năng và phi chức năng
 
@@ -118,7 +118,7 @@ Sơ đồ chuyển trạng thái chính xác của Shopee là ảnh trong tài l
                                    │
                     Spring Cloud Gateway ─── Keycloak (OIDC)
    ┌──────────┬───────────┬────────┼──────────┬────────────┬────────────┐
- tenant    catalog    inventory  order    fulfillment   reporting   notification
+workspace  catalog    inventory  order    fulfillment   reporting   notification
    │          │           │        │          │            │            │
    └──────────┴───────────┴── Kafka (event backbone) ─────┴────────────┘
                                    │
@@ -135,8 +135,8 @@ Sơ đồ chuyển trạng thái chính xác của Shopee là ảnh trong tài l
 
 | Service | Trách nhiệm | Dữ liệu sở hữu | Lưu trữ |
 |---|---|---|---|
-| **gateway** | Định tuyến, xác thực JWT, rate limit theo tenant, CORS | — | Redis (rate limit) |
-| **tenant** | Tenant, người dùng, vai trò, gói dịch vụ, hạn mức | tenant, plan, quota usage | PostgreSQL |
+| **gateway** | Định tuyến, xác thực JWT, rate limit theo Workspace, CORS | — | Redis (rate limit) |
+| **workspace** | Workspace, Account, Member, vai trò, gói dịch vụ, hạn mức | workspace, account, member, plan, quota usage | PostgreSQL |
 | **channel-connector** | Kết nối shop, token, gọi API sàn, rate limit sàn, đồng bộ tăng dần, chuyển dữ liệu sàn ↔ canonical | shop connection, encrypted token, sync checkpoint, outbound job | PostgreSQL + Redis |
 | **webhook-ingress** | Nhận push, kiểm chữ ký, ghi Kafka, trả 200 | — (không có DB, chỉ dedupe ngắn hạn) | Redis |
 | **catalog** | Master product/SKU, combo, listing, mapping, job đăng sản phẩm | product, sku, listing, mapping | PostgreSQL (+ OpenSearch cho tìm kiếm) |
@@ -151,11 +151,13 @@ Vài quyết định cần làm rõ (mỗi cái nên có một ADR):
 - **Vì sao tách webhook-ingress khỏi channel-connector?** Hai việc có yêu cầu vận hành ngược nhau. Ingress cần độ trễ thấp, ổn định, không phụ thuộc gì (để không bị sàn tắt subscription). Connector thì chậm, phụ thuộc sàn, hay bị rate limit. Tách ra để scale và deploy độc lập, và để connector có sập thì ingress vẫn nhận push.
 - **Vì sao inventory tách khỏi catalog?** Tồn kho có tần suất ghi cao và yêu cầu nhất quán chặt. Catalog ít ghi, đọc nhiều. Gộp lại thì lock của tồn kho ảnh hưởng tới catalog.
 - **Ranh giới canonical:** chỉ channel-connector biết khái niệm của từng sàn (`ordersn`, `shop_cipher`, `model_id`). Mọi service khác chỉ thấy model canonical.
-- **Không bắt đầu với đủ 10 service.** Giai đoạn 1 có thể gộp tenant vào gateway/Keycloak, gộp reporting vào order. Tách ra khi có lý do (xem lộ trình C18).
+- **Không bắt đầu với đủ 10 service.** Giai đoạn 1 có thể gộp workspace vào gateway/Keycloak, gộp reporting vào order. Tách ra khi có lý do (xem lộ trình C18).
 
 ## B2. Event chính
 
 Đặt tên theo quá khứ (việc đã xảy ra). Key là khóa partition Kafka, quyết định thứ tự.
+
+> Bảng dưới là gợi ý ban đầu. Danh mục event của Giai đoạn 1 (event mang trạng thái đầy đủ kèm version, tên, topic, key) đã chốt ở [ticket 09 của map kiến trúc G0–G1](.scratch/architecture-g0-g1/issues/09-g1-contracts.md#answer) và thay bảng này cho G1.
 
 | Event | Producer | Consumer | Key |
 |---|---|---|---|
@@ -171,7 +173,7 @@ Vài quyết định cần làm rõ (mỗi cái nên có một ADR):
 | `ListingMapped` / `ProductPublished` | catalog | inventory, channel-connector | `skuId` / `listingId` |
 | `ReturnRequested` / `ReturnReceived` | order | inventory, reporting | `orderId` |
 
-Topic gợi ý: mỗi aggregate một topic (`order.events`, `inventory.events`, ...), event có envelope chung: `eventId`, `eventType`, `occurredAt`, `tenantId`, `aggregateId`, `aggregateVersion`, `traceparent`, `schemaVersion`.
+Topic gợi ý: mỗi aggregate một topic (`order.events`, `inventory.events`, ...), event có envelope chung: `eventId`, `eventType`, `occurredAt`, `workspaceId`, `aggregateId`, `aggregateVersion`, `traceparent`, `schemaVersion`.
 
 ## B3. Luồng chính
 
@@ -231,7 +233,7 @@ Phiên bản nền: Java 25, **Spring Boot 4.1.x** (cùng dòng với `sp-jpa`).
 | **Database per service** | Mọi service có DB/schema riêng | Không service nào đọc trực tiếp bảng của service khác. Cần dữ liệu của nhau thì qua API hoặc event |
 | **Anti-corruption layer, ports & adapters (hexagonal)** | channel-connector: interface `MarketplacePort` có `TikTokAdapter`, `ShopeeAdapter`; fulfillment: `CarrierPort` | Ngăn khái niệm của sàn rò vào lõi. Thêm sàn mới chỉ viết adapter (N13). Chạy được với simulator hoặc sàn thật bằng cấu hình |
 | **Canonical data model** | Order status, product/variant, stock | Một mô hình chung, mỗi sàn ánh xạ vào |
-| **API Gateway** | gateway | Một cổng vào: xác thực, rate limit theo tenant, định tuyến |
+| **API Gateway** | gateway | Một cổng vào: xác thực, rate limit theo Workspace, định tuyến |
 | **BFF** (tùy chọn) | Next.js server (route handler) hoặc một service BFF | Gom nhiều API cho một màn hình, giảm round-trip từ trình duyệt |
 | **Modular monolith trước, tách sau** | Giai đoạn đầu | Học được cách chọn ranh giới. Tách khi có số đo chứng minh cần (scale khác nhau, deploy khác nhau) |
 | **ADR** | `adr/` của repo `docs` (cấp hệ thống) và `docs/adr/` trong từng repo service | Ghi lại quyết định và lý do. Đây là chất liệu tốt cho phỏng vấn |
@@ -244,7 +246,7 @@ Phiên bản nền: Java 25, **Spring Boot 4.1.x** (cùng dòng với `sp-jpa`).
 | **HTTP client có timeout tường minh** | Mọi lời gọi ra ngoài, đặc biệt là gọi sàn | Spring `RestClient` / HTTP Interface. Không bao giờ để timeout mặc định vô hạn |
 | **Service discovery bằng DNS của Kubernetes** | Gọi nội bộ | Không cần Eureka khi chạy trên K8s. Đây là chủ đề hay bị hỏi: khi nào còn cần Eureka |
 | **gRPC** (tùy chọn) | order → inventory để kiểm tồn nhanh | Để so sánh với REST: độ trễ, contract, streaming |
-| **Versioning API** | API public của tenant (F10.2) | Version trong path hoặc header; quy tắc thay đổi tương thích ngược |
+| **Versioning API** | API public cho Workspace (F10.2) | Version trong path hoặc header; quy tắc thay đổi tương thích ngược |
 | **Pagination bằng cursor** | Danh sách đơn | Offset chậm và lệch dữ liệu khi có ghi đồng thời. Giống cách sàn làm |
 
 ## C3. Event-driven architecture
@@ -296,7 +298,7 @@ Phiên bản nền: Java 25, **Spring Boot 4.1.x** (cùng dòng với `sp-jpa`).
 - **Distributed rate limiter** (token bucket trên Redis, ví dụ Bucket4j + Redis hoặc Lua script tự viết), khóa theo `(channel, appId, shopId, endpointClass)`.
 - **Rate limit thích nghi:** gặp 429 hoặc 36009002 thì giảm tốc, theo `Retry-After`; ổn định thì tăng dần (kiểu AIMD). Lý do: TikTok dùng quota động.
 - **Hàng đợi theo độ ưu tiên:** lệnh giao hàng > cập nhật tồn > đồng bộ đơn định kỳ > đăng sản phẩm hàng loạt. Job hàng loạt không được làm nghẽn lệnh khẩn.
-- **Fairness giữa tenant:** chia lượt theo tenant (weighted fair queuing) để tenant 10.000 SKU không làm chậm tenant 50 SKU.
+- **Fairness giữa Workspace:** chia lượt theo Workspace (weighted fair queuing) để Workspace 10.000 SKU không làm chậm Workspace 50 SKU.
 - **Retry với exponential backoff + jitter**, có giới hạn. Không retry lỗi nghiệp vụ (4xx khác 429). Bẫy: Shopee có thể hạn chế app vì retry dồn dập.
 - **Batching:** Shopee `get_order_detail` 50 đơn/lần, `update_stock` 50 model/lần.
 
@@ -355,19 +357,19 @@ Phiên bản nền: Java 25, **Spring Boot 4.1.x** (cùng dòng với `sp-jpa`).
 
 ## C8. Multi-tenancy
 
-- Mô hình: **shared database, shared schema, cột `tenant_id`**. So sánh với schema-per-tenant trong một ADR.
-- `tenant_id` lấy từ JWT, truyền qua mọi lời gọi và event header. Lọc tự động (Hibernate filter, hoặc **PostgreSQL Row-Level Security** để có lớp bảo vệ thứ hai).
+- Mô hình: **shared database, shared schema, cột `workspace_id`**. So sánh với schema-per-tenant trong một ADR.
+- `workspace_id` lấy từ JWT, truyền qua mọi lời gọi và event header. Lọc tự động (Hibernate filter, hoặc **PostgreSQL Row-Level Security** để có lớp bảo vệ thứ hai).
 - Hạn mức theo gói (F1.4): đếm usage bằng event, chặn ở gateway hoặc service.
-- Noisy neighbour: fairness ở connector (C5.2), rate limit theo tenant ở gateway, metric gắn nhãn tenant (cẩn thận cardinality).
+- Noisy neighbour: fairness ở connector (C5.2), rate limit theo Workspace ở gateway, metric gắn nhãn Workspace (cẩn thận cardinality).
 
 ## C9. Bảo mật
 
 | Kỹ thuật | Dùng ở đâu |
 |---|---|
 | **OAuth2/OIDC với Keycloak** | Đăng nhập; service là resource server kiểm JWT (Spring Security) |
-| **Phân quyền theo vai trò và phạm vi** (shop, kho) | Method security, kiểm tra theo tenant |
+| **Phân quyền theo vai trò và phạm vi** (shop, kho) | Method security, kiểm tra theo Workspace |
 | **Xác thực service-to-service** | mTLS qua service mesh (giai đoạn sau), hoặc client credentials |
-| **Webhook HMAC** | Nhận (từ sàn) và gửi (cho tenant, F10.3) |
+| **Webhook HMAC** | Nhận (từ sàn) và gửi (cho Workspace, F10.3) |
 | **Mã hóa secret khi lưu** | Token sàn (C5.3) |
 | **Quản lý secret trên K8s** | Sealed Secrets hoặc External Secrets + Vault; không commit secret |
 | **Che PII** | Log không chứa số điện thoại, địa chỉ người mua (logback masking) |
@@ -381,7 +383,7 @@ Phiên bản nền: Java 25, **Spring Boot 4.1.x** (cùng dòng với `sp-jpa`).
 |---|---|---|
 | **OpenTelemetry** | Mọi service | Spring Boot 4.1 có auto-config xuất trace, metric và log qua OTLP (`management.otlp.metrics.export.url`, `management.opentelemetry.logging.export.otlp.endpoint`) |
 | **Trace xuyên Kafka** | Mọi producer/consumer | Truyền `traceparent` trong header message, để một đơn đi qua webhook → connector → order → inventory → connector nằm trên một trace (N12) |
-| **Structured logging (JSON)** | Mọi service | Log có `traceId`, `tenantId`, `orderId`, `shopId`; tìm trên Loki |
+| **Structured logging (JSON)** | Mọi service | Log có `traceId`, `workspaceId`, `orderId`, `shopId`; tìm trên Loki |
 | **Metric RED/USE** | HTTP, consumer, DB pool | Rate, errors, duration; Kafka consumer lag |
 | **Business metric** | `stock_sync_lag`, `orders_imported_total{channel}`, `reconciliation_found_missing`, `oversell_detected_total`, `channel_api_429_total`, `token_refresh_failures_total` | Đây là metric thể hiện sức khỏe sản phẩm, quan trọng hơn CPU |
 | **Stack Grafana LGTM** | Loki (log), Grafana, Tempo (trace), Mimir/Prometheus (metric); OTel Collector hoặc Grafana Alloy ở giữa | |
@@ -411,7 +413,7 @@ Phiên bản nền: Java 25, **Spring Boot 4.1.x** (cùng dòng với `sp-jpa`).
 - **Reusable workflow**: mỗi repo service gọi workflow chung trong repo `platform` thay vì chép CI.
 - **Canary hoặc blue-green** với Argo Rollouts, kèm phân tích tự động theo metric (tỷ lệ lỗi, `stock_sync_lag`).
 - Migration DB chạy trước khi deploy, theo kiểu expand/contract.
-- Feature flag (OpenFeature/flagd): bật tính năng theo tenant.
+- Feature flag (OpenFeature/flagd): bật tính năng theo Workspace.
 
 ## C13. Scale và hiệu năng
 
@@ -445,7 +447,7 @@ Phiên bản nền: Java 25, **Spring Boot 4.1.x** (cùng dòng với `sp-jpa`).
 
 ✅ trọng tâm · ○ có dùng
 
-| Kỹ thuật | gateway | tenant | connector | ingress | catalog | inventory | order | fulfillment | reporting | notification |
+| Kỹ thuật | gateway | workspace | connector | ingress | catalog | inventory | order | fulfillment | reporting | notification |
 |---|---|---|---|---|---|---|---|---|---|---|
 | Outbox + CDC | | | ○ | | ✅ | ✅ | ✅ | ✅ | | |
 | Idempotent consumer | | | ✅ | | ○ | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -507,7 +509,7 @@ Mỗi dòng là một câu chuyện "vấn đề, cách làm, số đo" kể đ�
 2. **Dual-write và outbox:** vì sao không gửi Kafka ngay trong `@Transactional`; Debezium vs polling publisher.
 3. **Webhook trùng và sai thứ tự:** idempotency, version theo `update_time`, reconciliation làm lưới an toàn.
 4. **Refresh token xoay vòng gây mất kết nối:** tái hiện race condition, sửa bằng single-flight.
-5. **Tuân thủ rate limit động của bên thứ ba:** token bucket phân tán, AIMD, hàng đợi ưu tiên, fairness giữa tenant.
+5. **Tuân thủ rate limit động của bên thứ ba:** token bucket phân tán, AIMD, hàng đợi ưu tiên, fairness giữa Workspace.
 6. **Saga xử lý đơn:** orchestration vs choreography, compensation, kill pod giữa saga.
 7. **Flash sale:** KEDA theo lag, hot partition, backpressure.
 8. **Truy vết một đơn qua 6 service:** OTel xuyên Kafka, business metric, SLO.

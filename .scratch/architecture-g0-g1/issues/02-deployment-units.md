@@ -14,7 +14,7 @@ C1 ghi "modular monolith trước, tách sau", B1 vẽ 10 service, ADR-0001 ch�
 Chốt ngày 2026-11-12 (người dùng): **tách service theo B1** để làm đúng chuẩn microservice; bỏ hướng modular monolith của C1. Thư mục `commerce-hub/` là workspace của cả hệ thống; mỗi service là một project (một repo, theo ADR-0001) trong `services/`.
 
 Hệ quả cho G1 (suy ra từ ma trận truy vết, mỗi yêu cầu G1 có service sở hữu riêng):
-- `services/`: gateway, tenant, channel-connector, catalog, inventory, order.
+- `services/`: gateway, workspace, channel-connector, catalog, inventory, order.
 - `simulators/shopee-sim`, `frontend/` (Next.js).
 - Chưa có ở G1: webhook-ingress, notification (G2), fulfillment (G4), reporting (G6).
 
