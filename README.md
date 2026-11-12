@@ -15,5 +15,7 @@ Tài liệu cấp hệ thống của commerce-hub. Tài liệu riêng của mộ
 | `adr/` | Architecture Decision Records cấp hệ thống, đánh số `NNNN-ten-quyet-dinh.md` |
 | `experiments/` | Mỗi thí nghiệm một thư mục: giả thuyết, cách đo, số đo, kết luận |
 | `runbooks/` | Hướng dẫn vận hành, xử lý sự cố, postmortem |
+| `agents/` | Cấu hình cho engineering skills: issue tracker, nhãn triage, cách đọc domain docs |
+| `.scratch/` | Issue tracker dạng markdown: spec, ticket, map của wayfinder, mỗi feature một thư mục |
 
 Thứ tự đọc: Charter → Glossary → SRS → Domain model → Luồng người dùng.
