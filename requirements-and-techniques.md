@@ -357,8 +357,8 @@ Phiên bản nền: Java 25, **Spring Boot 4.1.x** (cùng dòng với `sp-jpa`).
 
 ## C8. Multi-tenancy
 
-- Mô hình: **shared database, shared schema, cột `workspace_id`**. So sánh với schema-per-tenant trong một ADR.
-- `workspace_id` lấy từ JWT, truyền qua mọi lời gọi và event header. Lọc tự động (Hibernate filter, hoặc **PostgreSQL Row-Level Security** để có lớp bảo vệ thứ hai).
+- Mô hình: **shared database, shared schema, cột `workspace_id`**. So sánh với schema-per-tenant và cách chọn ở [ADR-0010](adr/0010-workspace-isolation-shared-schema-with-mandatory-rls.md).
+- Workspace lấy từ header `X-Workspace-Id` đã kiểm Member ([ADR-0008](adr/0008-keycloak-authn-only-members-replicated-via-kafka.md)), truyền qua mọi lời gọi và trường `workspaceId` của envelope event. Code ghi rõ `workspace_id` trong truy vấn, còn **PostgreSQL Row-Level Security** (bắt buộc, `FORCE`) là thứ bảo đảm.
 - Hạn mức theo gói (F1.4): đếm usage bằng event, chặn ở gateway hoặc service.
 - Noisy neighbour: fairness ở connector (C5.2), rate limit theo Workspace ở gateway, metric gắn nhãn Workspace (cẩn thận cardinality).
 
