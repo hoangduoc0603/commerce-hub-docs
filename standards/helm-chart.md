@@ -77,7 +77,7 @@
 ## Lệch chuẩn có chủ đích ở home lab
 
 - **Chart trên docker-registry 2.8 không TLS, không auth** (`--plain-http`). Docs Helm ghi Docker Registry chỉ hợp cho thử nghiệm cục bộ. Chấp nhận vì registry chỉ trong lab/tailnet. Cách Argo CD kéo chart từ registry HTTP thuộc [`gitops-argocd.md`](gitops-argocd.md).
-- **`replicaCount: 2` mặc định**, không phải 3. Cụm chỉ còn khoảng 8–9 GB RAM cho service; 2 replica vẫn giữ được rollout và drain không gián đoạn.
+- **Chart giữ `replicaCount: 2` mặc định**, không phải 3. Values của môi trường lab trong `gitops` đặt `replicaCount: 1` và memory 512Mi; chỉ tăng khi làm thí nghiệm ([ADR-0004](../adr/0004-single-instance-by-default-on-homelab.md), ngân sách ở [ticket 04](../.scratch/architecture-g0-g1/issues/04-resource-budget.md#answer)). Với 1 replica chart không render PDB.
 - **`ScheduleAnyway` thay cho `DoNotSchedule`.** 3 node, trong đó control plane cũng nhận pod; ưu tiên rollout chạy được hơn rải tuyệt đối.
 - **Không ký chart** (`helm-sigstore`) vì lý do giống image, xem [`container-image.md`](container-image.md).
 

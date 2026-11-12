@@ -5,7 +5,7 @@ date: 2026-11-12
 
 # ADR-0003: Một cluster PostgreSQL dùng chung cho mọi service
 
-Mọi service có DB (tenant, channel-connector, catalog, inventory, order), Keycloak và `shopee-sim` dùng chung một `Cluster` CloudNativePG tên `pg-main` (PostgreSQL 18, 2 instance) ở namespace `postgres`. Database per service (C1) vẫn giữ ở mức logic: mỗi service một `Database` riêng và bộ role `<svc>_owner` / `_migrator` / `_app`, `REVOKE CONNECT, TEMPORARY ... FROM PUBLIC`, `pg_hba` theo database × role, `connectionLimit` cho từng role. Không service nào có quyền vào database của service khác. Chi tiết và nguồn ở [tra cứu 11/2026](../research/2026-11-postgres-on-cluster.md) (ticket [03](../.scratch/architecture-g0-g1/issues/03-postgres-on-cluster.md)).
+Mọi service có DB (tenant, channel-connector, catalog, inventory, order), Keycloak và `shopee-sim` dùng chung một `Cluster` CloudNativePG tên `pg-main` (PostgreSQL 18; số instance ở lab theo [ADR-0004](0004-single-instance-by-default-on-homelab.md)) ở namespace `postgres`. Database per service (C1) vẫn giữ ở mức logic: mỗi service một `Database` riêng và bộ role `<svc>_owner` / `_migrator` / `_app`, `REVOKE CONNECT, TEMPORARY ... FROM PUBLIC`, `pg_hba` theo database × role, `connectionLimit` cho từng role. Không service nào có quyền vào database của service khác. Chi tiết và nguồn ở [tra cứu 11/2026](../research/2026-11-postgres-on-cluster.md) (ticket [03](../.scratch/architecture-g0-g1/issues/03-postgres-on-cluster.md)).
 
 ## Phương án đã cân nhắc
 

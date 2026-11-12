@@ -19,7 +19,8 @@ Ngày mở: 2026-11-12
 
 - [01 Checklist chuẩn production cho hạ tầng G0](issues/01-infra-standards.md): đủ 9 file trong `docs/standards/`; các đề xuất "nên viết ADR" đã chia về ticket 04, 05, 06, 07, 09, 11, 15.
 - [02 Đơn vị triển khai ở G0–G1](issues/02-deployment-units.md): tách service theo B1 (microservice thật), mỗi service một repo trong `services/`; G1 có gateway, tenant, channel-connector, catalog, inventory, order, cùng `shopee-sim` và frontend.
-- [03 PostgreSQL trên cụm home lab](issues/03-postgres-on-cluster.md): CloudNativePG 1.30.1 + PG 18, một cluster `pg-main` dùng chung (ADR-0003), 2 instance, Barman Cloud lên RustFS trên `gw`, PgBouncer `transaction`.
+- [03 PostgreSQL trên cụm home lab](issues/03-postgres-on-cluster.md): CloudNativePG 1.30.1 + PG 18, một cluster `pg-main` dùng chung (ADR-0003), 2 instance (ở lab còn 1, theo ticket 04), Barman Cloud lên RustFS trên `gw`, PgBouncer `transaction`.
+- [04 Ngân sách tài nguyên home lab](issues/04-resource-budget.md): máy giữ 32 GB. Mặc định mỗi service và DB chạy 1 instance, chỉ scale khi làm thí nghiệm. Giữ số lượng thành phần hạ tầng, giảm cỡ (Kafka 1 Gi/broker, JVM 512 Mi). Còn dư khoảng 1 GiB; phải đo ở G0 (ADR-0004).
 
 ## Not yet specified
 

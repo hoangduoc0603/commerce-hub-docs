@@ -13,7 +13,7 @@
 - [ ] Mọi CR dùng `apiVersion: kafka.strimzi.io/v1`, `spec.kafka.version: 4.3.2`. Đây là API của Strimzi 1.x, khớp ví dụ trong tài liệu. [Strimzi – Deploying and Managing 1.3.1](https://strimzi.io/docs/operators/latest/deploying)
 - [ ] Một `KafkaNodePool` 3 node với `roles: [controller, broker]`, `storage.type: persistent-claim`, mỗi node trên một VM khác nhau (anti-affinity hoặc `topologySpreadConstraints` theo `kubernetes.io/hostname`). Mất một VM vẫn còn 2/3 controller và 2/3 replica. [Strimzi – Using Kafka in KRaft mode](https://strimzi.io/docs/operators/latest/deploying#assembly-kraft-mode-str)
 - [ ] Ghi nhận: Strimzi dùng **static controller quorum**, không chuyển sang dynamic được, nên thêm, bớt hay đổi vai trò controller về sau rất khó. Chọn bố cục node pool một lần. [Strimzi – KRaft limitations](https://strimzi.io/docs/operators/latest/deploying#assembly-kraft-mode-str)
-- [ ] `resources.requests.memory` = `limits.memory` cho broker (khoảng 1,5 Gi), heap đặt qua `jvmOptions` (`-Xms`/`-Xmx` khoảng 1 G). Cụm sát RAM, broker bị OOM kill sẽ kéo theo rebalance hàng loạt. [Strimzi – Resource limits and requests](https://strimzi.io/docs/operators/latest/deploying#resource_limits_and_requests_recommended), [homelab mục 12.1](../../platform/docs/homelab-hyperv.md)
+- [ ] `resources.requests.memory` = `limits.memory` cho broker (lab: 1 Gi), heap đặt qua `jvmOptions` (`-Xms`/`-Xmx` 512m) ([ticket 04](../.scratch/architecture-g0-g1/issues/04-resource-budget.md#answer)). Entity Operator (topic, user) cũng phải có memory limit: image operator của Strimzi đặt `-XX:MaxRAMPercentage=20`, nên không có limit thì heap tính theo RAM của node. Cụm sát RAM, broker bị OOM kill sẽ kéo theo rebalance hàng loạt. [Strimzi – Resource limits and requests](https://strimzi.io/docs/operators/latest/deploying#resource_limits_and_requests_recommended), [homelab mục 12.1](../../platform/docs/homelab-hyperv.md)
 - [ ] Giữ PodDisruptionBudget do Strimzi tạo và dùng Strimzi Drain Cleaner khi drain node. Drain không được tắt hai broker cùng lúc. [Strimzi – Evicting pods with Drain Cleaner](https://strimzi.io/docs/operators/latest/deploying#assembly-drain-cleaner-str)
 
 ### Cấu hình broker (độ bền)
@@ -92,7 +92,7 @@
 | Xác thực client | mTLS + ACL `simple` | SCRAM-SHA-512; OAuth qua Keycloak | Strimzi tự cấp chứng chỉ qua `KafkaUser`, không cần thêm secret mật khẩu; OAuth thêm phụ thuộc Keycloak vào đường dữ liệu | [Strimzi – Securing access](https://strimzi.io/docs/operators/latest/deploying#assembly-securing-access-str) |
 
 ## Lệch chuẩn có chủ đích ở home lab
-- **Node dual-role, 3 node.** Strimzi khuyên controller và broker tách riêng cho production. Lab không đủ RAM cho 6 pod (ngân sách Kafka khoảng 4,5 GB). Hệ quả: controller và broker chung tài nguyên; vì static quorum nên muốn tách sau này phải dựng cụm mới và chuyển dữ liệu.
+- **Node dual-role, 3 node.** Strimzi khuyên controller và broker tách riêng cho production. Lab không đủ RAM cho 6 pod (ngân sách Kafka khoảng 3 GiB cho broker, xem [ticket 04](../.scratch/architecture-g0-g1/issues/04-resource-budget.md#answer)). Hệ quả: controller và broker chung tài nguyên; vì static quorum nên muốn tách sau này phải dựng cụm mới và chuyển dữ liệu.
 - **Không có rack awareness.** Ba VM nằm trên một máy bàn, nên "rack" không có ý nghĩa; mất máy bàn là mất cả cụm. N10 (RPO/RTO) cho Kafka không đạt được ở lab, chỉ đạt cho PostgreSQL qua backup.
 - **Storage `local-path`.** PV gắn chặt vào node; node chết thì broker trên đó chỉ phục hồi bằng cách replicate lại từ broker khác.
 - **Listener `plain` chỉ ở giai đoạn 0** cho service "hello"; từ giai đoạn 1 mọi service dùng mTLS.
@@ -111,7 +111,7 @@ Ghi kết quả vào `docs/experiments/` kèm ngày chạy.
 | DLT | Gửi một message không deserialize được | Message có trong `<topic>.<group>-dlt` sau 1 lần thử, kèm header exception; alert DLT bắn |
 | Schema | Đẩy một schema xóa field không default vào PR của `contracts` | CI fail ở bước kiểm tương thích |
 | ACL | Dùng chứng chỉ của `notification` để ghi vào `order.events` | `TopicAuthorizationException` |
-| RAM | `kubectl top pods -n kafka` sau 24 giờ chạy tải nền | Tổng ≤ 4,5 GB; không có OOMKilled (`kubectl get events -n kafka`) |
+| RAM | `kubectl top pods -n kafka` sau 24 giờ chạy tải nền | Broker ≤ 3 GiB, cả namespace ≤ 4 GiB; không có OOMKilled (`kubectl get events -n kafka`) |
 
 ## Nguồn
 - Apache Kafka: [Downloads](https://kafka.apache.org/community/downloads/) · [4.3 Upgrade notes](https://kafka.apache.org/43/getting-started/upgrade/) · [Producer configs](https://kafka.apache.org/43/configuration/producer-configs/) · [Consumer configs](https://kafka.apache.org/43/configuration/consumer-configs/) · [Topic configs](https://kafka.apache.org/43/configuration/topic-configs/) · [Consumer rebalance protocol](https://kafka.apache.org/43/operations/consumer-rebalance-protocol/) · [Basic operations](https://kafka.apache.org/43/operations/basic-kafka-operations/) · [Monitoring](https://kafka.apache.org/43/operations/monitoring/) · [Design](https://kafka.apache.org/43/design/design/) · [KIP-848](https://cwiki.apache.org/confluence/display/KAFKA/KIP-848%3A+The+Next+Generation+of+the+Consumer+Rebalance+Protocol)

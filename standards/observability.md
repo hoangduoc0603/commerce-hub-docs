@@ -71,7 +71,7 @@
 - **Tempo monolithic trên Kubernetes.** Tài liệu Tempo không khuyên dùng cho production. Chấp nhận vì lab chỉ có một người dùng và trace chỉ giữ 7 ngày.
 - **Một bản Prometheus, một Loki, một Tempo, lưu trên `local-path`.** Không HA: node chứa backend chết thì mất số liệu trong lúc đó. Số liệu của thí nghiệm phải được xuất ra `docs/experiments/` ngay khi đo, không để lại trong Prometheus.
 - **Sampling 100%.** Production ở tải lớn thường hạ tỷ lệ hoặc dùng tail sampling; ở lab ưu tiên N12.
-- **Ngân sách RAM.** Bảng ước lượng trong `platform/docs/homelab-hyperv.md` chưa có dòng cho LGTM. Ước lượng **chưa đo**: Prometheus 1–1,5 GB, Loki 0,5–1 GB, Tempo 0,5–1 GB, Grafana 0,25 GB, Collector 3 × 0,2 GB, node-exporter + kube-state-metrics + Alertmanager khoảng 0,3 GB, tổng khoảng 3–4,5 GB, lấy từ phần 8–9 GB dành cho service. Đo thật ở giai đoạn 0 rồi cập nhật tài liệu homelab.
+- **Ngân sách RAM** ([ticket 04](../.scratch/architecture-g0-g1/issues/04-resource-budget.md#answer), **chưa đo**): tổng LGTM khoảng 3,4 GiB. Limit: Prometheus 1Gi (`--auto-gomemlimit` cần limit), Loki monolithic 512Mi, Tempo 512Mi, Grafana và sidecar 320Mi, Collector 3 × 192Mi, Alertmanager, prometheus-operator, kube-state-metrics mỗi thứ 128Mi, node-exporter 3 × 48Mi. **Tắt `chunksCache` và `resultsCache` của chart Loki**: mặc định chúng request 9830Mi và 1229Mi, không vừa node 8 GiB. Đo thật ở giai đoạn 0 rồi cập nhật ticket 04 và ADR-0004.
 
 ## Bằng chứng cần có
 Ghi vào `docs/experiments/` kèm ngày chạy.

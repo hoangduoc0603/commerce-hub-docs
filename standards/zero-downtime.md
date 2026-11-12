@@ -55,7 +55,7 @@
 
 ## Lệch chuẩn có chủ đích ở home lab
 
-- **2 replica, 3 node**, control plane cũng nhận pod. Mất một node trong lúc rollout có thể chỉ còn 1 pod phục vụ; chấp nhận vì cụm lab chỉ còn khoảng 8–9 GB RAM cho service.
+- **Lab chạy 1 replica mặc định** ([ADR-0004](../adr/0004-single-instance-by-default-on-homelab.md)). Cụm 24 GiB không đủ cho 2 replica mỗi service, chỉ còn dư khoảng 1 GiB ([ticket 04](../.scratch/architecture-g0-g1/issues/04-resource-budget.md#answer)). Rollout và drain ở lab vì vậy có gián đoạn. Checklist này (2 replica, PDB) chỉ áp dụng khi thí nghiệm N15 scale service lên 2, bằng một commit vào `gitops`. Control plane cũng nhận pod.
 - **`maxSurge: 1`** làm rollout chậm khi có nhiều replica. Với 2 replica, khác biệt không đáng kể.
 - **Đo tải ở quy mô nhỏ** (cùng máy bàn chạy cụm, k6 chạy từ Mac qua Tailscale). Đường mạng qua Tailscale thêm độ trễ, nên N15 chỉ chấm theo **số request lỗi**, không chấm theo latency trong thí nghiệm này. Giới hạn đã ghi ở rủi ro của Charter.
 

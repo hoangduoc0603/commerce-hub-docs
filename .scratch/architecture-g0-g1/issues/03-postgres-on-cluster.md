@@ -30,3 +30,4 @@ Chốt 2026-11-12 (người dùng duyệt đề xuất của [tra cứu](../../.
 - **Role và RLS:** giữ 3 role owner/migrator/app và `FORCE ROW LEVEL SECURITY`; không có mâu thuẫn với CNPG (owner bảng mới bỏ qua RLS, FAQ của CNPG cũng khuyên user riêng). Khai báo role bằng `DatabaseRole` trong app `platform`.
 
 Phần phân quyền + tenant context để ticket 06 chốt trong ADR multi-tenancy. Phụ thuộc mới (cert-manager, RustFS trên `gw`, pod Pooler, sidecar Barman) chuyển sang ticket 04.
+- 2026-11-12: Ticket [04 Ngân sách tài nguyên home lab](04-resource-budget.md#answer) sửa một ý của Answer trên: ở lab, `pg-main` chạy **1 instance** mặc định ([ADR-0004](../../../adr/0004-single-instance-by-default-on-homelab.md)). Chỉ dựng instance thứ hai khi làm thí nghiệm failover. Pooler cũng còn 1 pod. Còn lại giữ nguyên. Với 1 instance, PDB của CNPG có thể chặn drain node; cách xử lý **chưa xác minh**.
