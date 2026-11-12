@@ -11,3 +11,4 @@ Map: [Kiến trúc G0–G1](../map.md)
 
 ## Comments
 - 2026-11-12: Từ ticket [08 Giao tiếp giữa service ở G1](08-g1-communication.md#answer): bảng luồng G1 cần đặt tên event và key. Gồm: Order đã chuẩn hóa (connector → order), Listing đã kéo về (connector → catalog), ghép và bỏ ghép Listing (catalog → order), dòng đơn kèm Master SKU (order → inventory), Short order bật/tắt (inventory → order). Thêm một lệnh REST nội bộ: khai báo tồn ban đầu (catalog → inventory), idempotent theo (job, Master SKU). Avro và Schema Registry có ngay từ G1 ([ADR-0005](../../../adr/0005-kafka-from-g1-with-deliberate-dual-write.md)).
+- 2026-11-12: Từ ticket [12 Kiến trúc shopee-sim](12-shopee-sim.md#answer): thêm OpenAPI của **admin API simulator** (tạo App, Shop, seed Listing, tạo và chuyển trạng thái đơn, "hết hạn ngay", ghi đè AS-xx) vào danh sách contract. **Không** viết OpenAPI cho API của Shopee: connector và simulator mỗi bên tự cài đặt từ tài liệu chính thức.

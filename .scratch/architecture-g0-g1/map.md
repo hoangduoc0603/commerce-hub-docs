@@ -18,10 +18,11 @@ Ngày mở: 2026-11-12
 ## Decisions so far
 
 - [01 Checklist chuẩn production cho hạ tầng G0](issues/01-infra-standards.md): đủ 9 file trong `docs/standards/`; các đề xuất "nên viết ADR" đã chia về ticket 04, 05, 06, 07, 09, 11, 15.
-- [02 Đơn vị triển khai ở G0–G1](issues/02-deployment-units.md): tách service theo B1 (microservice thật), mỗi service một repo trong `services/`; G1 có gateway, tenant, channel-connector, catalog, inventory, order, cùng `shopee-sim` và frontend.
+- [02 Đơn vị triển khai ở G0–G1](issues/02-deployment-units.md): tách service theo B1 (microservice thật), mỗi service một repo trong `services/`; G1 có gateway, tenant, channel-connector, catalog, inventory, order, cùng `marketplace-sim` (tên đổi ở ticket 12) và frontend.
 - [03 PostgreSQL trên cụm home lab](issues/03-postgres-on-cluster.md): CloudNativePG 1.30.1 + PG 18, một cluster `pg-main` dùng chung (ADR-0003), 2 instance (ở lab còn 1, theo ticket 04), Barman Cloud lên RustFS trên `gw`, PgBouncer `transaction`.
 - [04 Ngân sách tài nguyên home lab](issues/04-resource-budget.md): máy giữ 32 GB. Mặc định mỗi service và DB chạy 1 instance, chỉ scale khi làm thí nghiệm. Giữ số lượng thành phần hạ tầng, giảm cỡ (Kafka 1 Gi/broker, JVM 512 Mi). Còn dư khoảng 1 GiB; phải đo ở G0 (ADR-0004).
 - [08 Giao tiếp giữa service ở G1](issues/08-g1-communication.md): mọi luồng đi qua Kafka. Chỉ có một lệnh REST nội bộ là khai báo tồn ban đầu (F3.3c). order, catalog, inventory cố ý dual-write sau commit qua một port publish, và G2 đổi port này sang outbox. connector không bao giờ cần outbox. order giữ bản sao Mapping, còn inventory sở hữu Short order (ADR-0005).
+- [12 Kiến trúc shopee-sim cho SIM-01..08](issues/12-shopee-sim.md): một repo và một pod `marketplace-sim` phục vụ cả hai sàn, chia dialect theo đường dẫn. Core giữ trạng thái, token, nút chỉnh và admin API. Dialect giữ HTTP, chữ ký và máy trạng thái đơn. Lưu ở database `marketplace_sim` trên `pg-main`. Dùng giờ thật, thời hạn chỉnh bằng cấu hình. AS-xx có hai lớp: mặc định ở `gitops`, ghi đè qua admin API. Admin API có OpenAPI trong `contracts`, API Shopee thì không.
 - [15 Repo public hay private](issues/15-repo-visibility.md): mọi repo public trên tài khoản cá nhân (Free, MIT), CI dùng GitHub-hosted runner vào lab qua Tailscale, nhánh chỉ chặn force push/xóa (ADR-0006).
 
 ## Not yet specified
@@ -30,6 +31,7 @@ Ngày mở: 2026-11-12
 - Polling đơn F5.2b ở G1: job chạy đơn instance hay chia theo shop, checkpoint lưu đâu. Thứ tự đã chốt ở ticket 08: gửi, chờ ack, rồi mới dời checkpoint.
 - Quy ước chung cho ID, tiền, thời gian (UUIDv7?, `BigDecimal` + mã tiền tệ?, UTC).
 - Pipeline publish contract (Maven/npm artifact từ repo `contracts`): phụ thuộc ticket 09 và 11. Ticket 15 đã chốt mọi repo public. **Chưa xác minh**: GitHub Packages có bắt token khi tải cả package public hay không. Nếu có thì mọi build sẽ cần credential đọc.
+- Bộ test tuân thủ của simulator so với connector: dựng từ ví dụ trong tài liệu Shopee, chạy ở CI của repo nào, và có dùng làm contract test cho adapter của connector không (gắn với chiến lược test G1).
 - Chi tiết gateway: Spring Cloud Gateway bản WebFlux hay MVC, rate limit theo Workspace ở G1 hay để sau.
 
 ## Out of scope
@@ -37,3 +39,4 @@ Ngày mở: 2026-11-12
 - Ba câu hỏi mở ở [SRS chương 9](../../requirements/srs.md#9-giả-định-và-câu-hỏi-mở): số partition và SKU nóng (C13, Giai đoạn 5), single-flight làm mới token (C5.3, Giai đoạn 3), workflow engine cho saga (C4, Giai đoạn 4). Lý do: thuộc giai đoạn sau đích của map; quyết định khi có số đo.
 - Thiết kế các service ra đời từ Giai đoạn 2 trở đi (webhook-ingress, notification, fulfillment, reporting), outbox + Debezium, DLT. Lý do: ngoài đích G0–G1.
 - Cách G2 đo dual-write: failpoint giữa commit và gửi, bộ đếm Reservation thiếu (từ [08 Giao tiếp giữa service ở G1](issues/08-g1-communication.md)). Lý do: G1 chỉ cần để sẵn port publish; phép đo là việc của G2.
+- Simulator ghi chung `pg-main` làm nhiễu phép đo N6 ở 500 đơn/s (từ [12 Kiến trúc shopee-sim cho SIM-01..08](issues/12-shopee-sim.md)). Lý do: chỉ lộ ra ở G5; xem lại khi có số đo.

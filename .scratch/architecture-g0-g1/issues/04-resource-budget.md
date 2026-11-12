@@ -53,3 +53,4 @@ Chốt 2026-11-12 (người dùng): **máy giữ 32 GB. Mặc định mọi serv
 
 - 2026-11-12: Từ ticket 01: bảng RAM homelab thiếu Keycloak (~1,5 GB) và LGTM (~3–4,5 GB, ước lượng). Kafka 3 node dual-role (Strimzi 1.3.1). Mỗi service tối thiểu 2 replica (`zero-downtime.md`), memory limit = request (`helm-chart.md`).
 - 2026-11-12: Từ ticket 03: thêm cert-manager, Pooler PgBouncer (2 pod), sidecar Barman Cloud, RustFS trên VM `gw` (ngoài cụm); PostgreSQL `pg-main` 2 instance với requests = limits. RAM của các thành phần này **chưa xác minh**.
+- 2026-11-12: Từ ticket [12 Kiến trúc shopee-sim](12-shopee-sim.md#answer): `shopee-sim` 512 Mi đổi tên thành `marketplace-sim`. Ở G2 tiktok-sim chạy chung pod này, nên không tốn thêm RAM. Simulator dùng thêm một database `marketplace_sim` trên `pg-main`.

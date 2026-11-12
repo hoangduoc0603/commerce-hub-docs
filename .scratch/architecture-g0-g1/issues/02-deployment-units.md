@@ -19,3 +19,6 @@ Hệ quả cho G1 (suy ra từ ma trận truy vết, mỗi yêu cầu G1 có ser
 - Chưa có ở G1: webhook-ingress, notification (G2), fulfillment (G4), reporting (G6).
 
 Đi ngược C1 nhưng khớp ADR-0001, nên không cần ADR mới; khi viết arc42 (ticket 14) ghi rõ lý do bỏ modular monolith.
+
+## Comments
+- 2026-11-12: Từ ticket [12 Kiến trúc shopee-sim](12-shopee-sim.md#answer): `simulators/shopee-sim` đổi thành `simulators/marketplace-sim`, một repo và một deployable phục vụ cả Shopee và TikTok (khớp ADR-0001).
