@@ -26,13 +26,13 @@ Thành phần sở hữu là đề xuất ban đầu và sẽ được chốt �
 | F3.2a Kéo Listing | channel-connector, catalog | 1 | SIM-19 | ACL, upsert idempotent | | | Chưa làm |
 | F3.3a–b Ghép tự động, thủ công | catalog, inventory, order | 1 | | Event bù trừ giữa context | | | Chưa làm |
 | F3.3c Tạo Master SKU hàng loạt | catalog, inventory | 1 | | Job, thành công một phần | | | Chưa làm |
-| F4.1a–b Available, khai báo tồn | inventory | 1 | | Atomic update, xung đột ghi | | | Chưa làm |
+| F4.1a–b Available, khai báo tồn | inventory | 1 | | Atomic update, xung đột ghi | [ADR-0007](../adr/0007-stock-balance-plus-ledger-in-one-transaction.md) | | Chưa làm |
 | F4.1c Đẩy tồn | inventory, channel-connector | 2 | N3, N8, SIM-12, SIM-16 | Coalescing, thứ tự theo key, rate limit | | | Chưa làm |
 | F4.1d Lỗi đẩy tồn | channel-connector, notification | 2 | N8, SIM-11 | Phân loại lỗi, retry, DLT | | | Chưa làm |
 | F4.1e Đối soát tồn | channel-connector | 3 | SIM-19 | Reconciliation | | | Chưa làm |
-| F4.2a–b Giữ, nhả tồn | inventory | 1 | N5, N16, SIM-10 | Reservation, idempotent consumer | | | Chưa làm |
+| F4.2a–b Giữ, nhả tồn | inventory | 1 | N5, N16, SIM-10 | Reservation, idempotent consumer | [ADR-0007](../adr/0007-stock-balance-plus-ledger-in-one-transaction.md) | | Chưa làm |
 | F4.2c Trừ tồn thật | inventory, fulfillment, order | 4 | N16 | Idempotent theo sự kiện đến trước | | | Chưa làm |
-| F4.3a Sổ cái | inventory | 1 | N16 | Event sourcing giới hạn, kiểm bất biến | | | Chưa làm |
+| F4.3a Sổ cái | inventory | 1 | N16 | Event sourcing giới hạn, kiểm bất biến | [ADR-0007](../adr/0007-stock-balance-plus-ledger-in-one-transaction.md) | | Chưa làm |
 | F5.1a Danh sách đơn | order (+ read model) | 1 | N17 | Cursor, CQRS | | | Chưa làm |
 | F5.2a Webhook | webhook-ingress, channel-connector | 2 | N1, N2, N15, SIM-14, SIM-15 | HMAC, ghi bền rồi trả lời, dedupe, sai thứ tự | | | Chưa làm |
 | F5.2b Kéo bù đơn | channel-connector | 1 (poll), 3 (đối soát) | N4, SIM-08 | Cửa sổ chồng lấn, checkpoint | | | Chưa làm |

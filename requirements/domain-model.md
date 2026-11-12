@@ -1,6 +1,6 @@
 # commerce-hub: Domain model (mức khái niệm)
 
-- Phiên bản: 1.0, ngày 2026-11-12
+- Phiên bản: 1.1, ngày 2026-11-13 (1.1: OrderInventoryState và ranh giới nhất quán của inventory, theo [ADR-0007](../adr/0007-stock-balance-plus-ledger-in-one-transaction.md))
 - Phạm vi: P0. Tên thực thể theo [GLOSSARY.md](../GLOSSARY.md). Quy tắc theo mã BR trong [SRS](srs.md).
 
 Tài liệu này mô tả **khái niệm và quan hệ**, chưa phải schema. Kiểu dữ liệu, bảng và index được quyết định ở phase thiết kế, trong từng service.
@@ -28,6 +28,7 @@ erDiagram
     WAREHOUSE ||--o{ STOCK_ITEM : "chứa"
     STOCK_ITEM ||--o{ LEDGER_ENTRY : "ghi"
     STOCK_ITEM ||--o{ RESERVATION : "giữ"
+    ORDER ||--o| ORDER_INVENTORY_STATE : "trạng thái giữ tồn"
 
     ORDER ||--|{ ORDER_LINE : "gồm"
     ORDER ||--o{ PACKAGE : "giao bằng"
@@ -76,8 +77,9 @@ Ranh giới context đi theo [B1](../requirements-and-techniques.md#b1-bounded-c
 |---|---|---|
 | **Warehouse** | Workspace, tên, là kho mặc định | P0: mỗi Workspace có đúng một Warehouse |
 | **StockItem** | (MasterSku, Warehouse), On hand, tổng Reservation, đã khai báo tồn hay chưa | Số dư bằng tổng LedgerEntry (BR-29). Available có thể âm |
-| **Reservation** | StockItem, dòng đơn, số lượng, trạng thái (`Open`, `Released`, `Consumed`) | Mỗi dòng đơn có tối đa một Reservation (BR-20) |
-| **LedgerEntry** | StockItem, thời điểm, thay đổi On hand, thay đổi Reservation, loại lý do, tham chiếu, người thực hiện | Chỉ thêm, không sửa hay xóa (BR-28) |
+| **Reservation** | StockItem, dòng đơn, số lượng, trạng thái (`Open`, `Released`, `Consumed`) | Mỗi dòng đơn có tối đa một Reservation `Open` (BR-20). Dòng ghép lại sang SKU khác có thêm một Reservation `Released` cũ |
+| **LedgerEntry** | StockItem, thời điểm, thay đổi On hand, thay đổi Reservation, loại lý do, tham chiếu, người thực hiện, khóa idempotency (lệnh REST), có gây Oversell hay không | Chỉ thêm, không sửa hay xóa (BR-28) |
+| **OrderInventoryState** | Order, version Order đã áp dụng, cờ Short order | Không áp dụng version Order cũ hơn hoặc bằng giá trị đang lưu (BR-20). inventory là nguồn sự thật của cờ Short order |
 
 Published stock không phải thực thể được lưu trữ: nó được tính từ Available (BR-23). Số đã đẩy và đã được sàn xác nhận được lưu trên Listing.
 
@@ -108,7 +110,7 @@ Mỗi dòng dưới đây là một đơn vị thay đổi nguyên tử, tức m
 
 | Aggregate | Gồm | Vì sao gom như vậy |
 |---|---|---|
-| StockItem | StockItem + Reservation + LedgerEntry của nó | Giữ, nhả, trừ tồn và bút toán phải cùng thành công (BR-28, BR-29) |
+| StockItem | Mọi StockItem mà một Order chạm tới (cùng Reservation, LedgerEntry của chúng) + OrderInventoryState của các Order liên quan | Giữ, nhả, trừ tồn, bút toán và cờ Short order phải cùng thành công (BR-19, BR-28, BR-29). Short order là trạng thái theo Order nên một Order nhiều SKU phải nằm trong một thay đổi. Khóa theo thứ tự cố định: StockItem trước, rồi OrderInventoryState ([ADR-0007](../adr/0007-stock-balance-plus-ledger-in-one-transaction.md)) |
 | Order | Order + OrderLine + OrderStatusChange | Trạng thái và số lượng đã hủy thay đổi cùng nhau |
 | Package | Package + LabelJob | Vận đơn gắn với đúng một Package |
 | Shop | Shop + ShopAuthorization + SyncCheckpoint | Trạng thái kết nối và token phải nhất quán |

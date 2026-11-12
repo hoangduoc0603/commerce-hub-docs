@@ -1,7 +1,7 @@
 # commerce-hub: Đặc tả yêu cầu phần mềm (SRS)
 
-- Phiên bản: 1.0
-- Ngày: 2026-11-12
+- Phiên bản: 1.1
+- Ngày: 2026-11-13 (1.1: BR-19 với Master SKU chưa khai báo tồn, ticket 10 của map kiến trúc G0–G1)
 - Trạng thái: Đã chốt cho P0
 - Liên quan: [Project Charter](../project-charter.md) · [Glossary](../GLOSSARY.md) · [Domain model](domain-model.md) · [Luồng người dùng](user-flows.md) · [Ma trận truy vết](traceability.md) · [Kỹ thuật áp dụng](../requirements-and-techniques.md)
 
@@ -352,12 +352,13 @@ Case kỹ thuật: Phân loại lỗi tạm thời và vĩnh viễn, retry và d
 #### F4.2a Giữ tồn khi có đơn
 
 - **BR-18:** Hệ thống tạo Reservation cho mọi dòng đã ghép ngay lần đầu thấy Order ở bất kỳ trạng thái chưa hủy nào, kể cả `PendingPayment` và `OnHold` ([ADR-0002](../adr/0002-reserve-stock-on-first-sight.md)). Số lượng giữ bằng số lượng đặt trừ số lượng đã hủy.
-- **BR-19:** Reservation luôn được tạo, kể cả khi làm Available âm. Lý do: sàn đã bán thì hệ thống không thể từ chối. Order có ít nhất một dòng làm Available âm tại thời điểm giữ thì được gắn cờ **Short order**. Mỗi lần như vậy được tính vào chỉ số Oversell.
+- **BR-19:** Reservation luôn được tạo, kể cả khi làm Available âm. Lý do: sàn đã bán thì hệ thống không thể từ chối. Order có ít nhất một dòng làm Available âm tại thời điểm giữ thì được gắn cờ **Short order**. Mỗi lần như vậy được tính vào chỉ số Oversell. Master SKU chưa khai báo tồn (BR-21) thì không gắn cờ và không tính Oversell, vì hệ thống chưa biết số thực có. Khi khai báo lần đầu mà Available âm, mọi Order đang có Reservation mở trên SKU đó được gắn cờ Short order, nhưng **không** tính vào Oversell.
 - Cờ Short order tự gỡ khi Available của mọi SKU liên quan không còn âm, ví dụ sau khi khai báo thêm tồn, hoặc khi Order bị hủy. Short order vẫn xử lý giao bình thường được. Hệ thống không bao giờ tự hủy đơn trên sàn.
 - **BR-20:** Giữ tồn là idempotent theo dòng đơn: nhận cùng một Order nhiều lần (webhook trùng, kéo bù, đối soát) không bao giờ giữ thêm.
 
 AC:
 - Given SKU-A có Available 1, When hai đơn từ hai Shop khác nhau, mỗi đơn mua 1, về gần như cùng lúc, Then Available bằng −1, đúng một đơn có cờ Short order, và Oversell tăng 1.
+- Given SKU-C đã ghép nhưng chưa khai báo tồn, và 2 Order mỗi đơn mua 1 đã về, When người dùng đặt số tồn của SKU-C là 1, Then Available bằng −1, cả 2 Order có cờ Short order, và Oversell không tăng.
 - Given một Order đã nhận, When Simulator gửi lại đúng webhook đó 5 lần và job đối soát cũng thấy Order này, Then Reservation của Order vẫn chỉ có một.
 
 Case kỹ thuật: Reservation pattern, cập nhật nguyên tử, đơn luồng theo SKU, idempotent consumer (C3, C4). Đây là trọng tâm của N5.
