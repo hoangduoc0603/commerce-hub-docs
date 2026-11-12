@@ -41,3 +41,4 @@ Bối cảnh và các câu hỏi đã chốt nằm ở ticket [06 Cô lập Work
 ## Ghi chú
 
 - 2026-11-13: Đổi tên service `tenant` thành `workspace` theo GLOSSARY ([ticket 09](../.scratch/architecture-g0-g1/issues/09-g1-contracts.md#answer), Q24). Quyết định không đổi.
+- 2026-11-13: Bảng phiên của BFF trong database `seller_web` không có `workspace_id` và không bật RLS, vì phiên thuộc Account chứ không thuộc Workspace. Đây là ngoại lệ có chủ đích ([ADR-0011](0011-nextjs-bff-with-server-side-session.md)).

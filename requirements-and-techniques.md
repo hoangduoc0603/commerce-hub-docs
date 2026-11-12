@@ -135,7 +135,7 @@ workspace  catalog    inventory  order    fulfillment   reporting   notification
 
 | Service | Trách nhiệm | Dữ liệu sở hữu | Lưu trữ |
 |---|---|---|---|
-| **gateway** | Định tuyến, xác thực JWT, rate limit theo Workspace, CORS | — | Redis (rate limit) |
+| **gateway** | Định tuyến, xác thực JWT, rate limit theo Workspace. Chỉ nhận traffic từ BFF trong cụm, không cấu hình CORS ([ADR-0011](adr/0011-nextjs-bff-with-server-side-session.md)) | — | Redis (rate limit) |
 | **workspace** | Workspace, Account, Member, vai trò, gói dịch vụ, hạn mức | workspace, account, member, plan, quota usage | PostgreSQL |
 | **channel-connector** | Kết nối shop, token, gọi API sàn, rate limit sàn, đồng bộ tăng dần, chuyển dữ liệu sàn ↔ canonical | shop connection, encrypted token, sync checkpoint, outbound job | PostgreSQL + Redis |
 | **webhook-ingress** | Nhận push, kiểm chữ ký, ghi Kafka, trả 200 | — (không có DB, chỉ dedupe ngắn hạn) | Redis |
@@ -234,7 +234,7 @@ Phiên bản nền: Java 25, **Spring Boot 4.1.x** (cùng dòng với `sp-jpa`).
 | **Anti-corruption layer, ports & adapters (hexagonal)** | channel-connector: interface `MarketplacePort` có `TikTokAdapter`, `ShopeeAdapter`; fulfillment: `CarrierPort` | Ngăn khái niệm của sàn rò vào lõi. Thêm sàn mới chỉ viết adapter (N13). Chạy được với simulator hoặc sàn thật bằng cấu hình |
 | **Canonical data model** | Order status, product/variant, stock | Một mô hình chung, mỗi sàn ánh xạ vào |
 | **API Gateway** | gateway | Một cổng vào: xác thực, rate limit theo Workspace, định tuyến |
-| **BFF** (tùy chọn) | Next.js server (route handler) hoặc một service BFF | Gom nhiều API cho một màn hình, giảm round-trip từ trình duyệt |
+| **BFF** | Next.js server (route handler) | Giữ token OIDC ở server, trình duyệt chỉ có cookie phiên; proxy mỏng `/api/*` xuống gateway, không gom dữ liệu ở G1 ([ADR-0011](adr/0011-nextjs-bff-with-server-side-session.md)) |
 | **Modular monolith trước, tách sau** | Giai đoạn đầu | Học được cách chọn ranh giới. Tách khi có số đo chứng minh cần (scale khác nhau, deploy khác nhau) |
 | **ADR** | `adr/` của repo `docs` (cấp hệ thống) và `docs/adr/` trong từng repo service | Ghi lại quyết định và lý do. Đây là chất liệu tốt cho phỏng vấn |
 
@@ -374,7 +374,7 @@ Phiên bản nền: Java 25, **Spring Boot 4.1.x** (cùng dòng với `sp-jpa`).
 | **Quản lý secret trên K8s** | Sealed Secrets hoặc External Secrets + Vault; không commit secret |
 | **Che PII** | Log không chứa số điện thoại, địa chỉ người mua (logback masking) |
 | **Audit log** | Thao tác thay đổi tồn kho, hủy đơn, đổi quyền (F1.3) |
-| **NetworkPolicy** | Chỉ gateway nhận traffic ngoài; DB chỉ nhận từ service sở hữu |
+| **NetworkPolicy** | Traffic ngoài chỉ vào `seller-web` (BFF), Keycloak và (từ G2) webhook-ingress; gateway chỉ nhận từ `seller-web`; DB chỉ nhận từ service sở hữu ([ADR-0011](adr/0011-nextjs-bff-with-server-side-session.md)) |
 | **Quét lỗ hổng** | Quét image (Trivy), dependency trong CI |
 
 ## C10. Observability
@@ -438,8 +438,8 @@ Phiên bản nền: Java 25, **Spring Boot 4.1.x** (cùng dòng với `sp-jpa`).
 ## C15. Frontend
 
 - Next.js + TypeScript (App Router), TanStack Query cho data fetching, form có validation.
-- Đăng nhập OIDC với Keycloak (Auth.js hoặc thư viện OIDC client).
-- **SSE** để nhận đơn mới, tiến độ job, thông báo lỗi đồng bộ (đơn giản hơn WebSocket vì chỉ cần một chiều). Qua gateway thì cần cấu hình timeout và buffering phù hợp.
+- Đăng nhập OIDC với Keycloak theo mẫu BFF, thư viện `openid-client` + `jose` ([ADR-0011](adr/0011-nextjs-bff-with-server-side-session.md)).
+- **SSE** để nhận đơn mới, tiến độ job, thông báo lỗi đồng bộ (đơn giản hơn WebSocket vì chỉ cần một chiều). Đi qua BFF rồi gateway, nên cả hai chặng cần cấu hình timeout và buffering phù hợp; BFF đóng stream khi access token hết hạn để `EventSource` nối lại ([ticket 07](.scratch/architecture-g0-g1/issues/07-frontend-access.md#answer)).
 - Bảng lớn (danh sách đơn): phân trang cursor phía server, virtualized list.
 - Màn hình chính: kết nối shop, sức khỏe kết nối, sản phẩm và mapping, tồn kho theo kho và theo kênh, danh sách đơn và xử lý hàng loạt, dashboard.
 
