@@ -1,6 +1,6 @@
 # 01: Script tạo repo và vệ sinh repo public
 
-Status: ready-for-human
+Status: resolved
 Blocked by: None (can start immediately)
 Repos: platform, docs, gitops, contracts
 Spec: [G0](../spec.md)
@@ -37,11 +37,11 @@ Seam kiểm cho cả ticket: `repo-audit.sh` đọc trạng thái repo qua API, 
   - 2026-11-13: ruleset tạo được trên Free; không có policy ghim SHA cấp owner (404), bật ở cấp repo; `actions.lock` chạy được trên Free (có lockfile xanh, bỏ lockfile đỏ). Ghi ở `ci-cd.md`. Sandbox tạo mới dạng public thay vì đổi repo private cũ (repo cũ có commit lộ email, đã xóa).
 - [x] 5. Chốt layout `platform/scripts/github/`, viết `repo-audit.sh` cho các tiêu chí settings (đỏ trước). Kiểm: chạy trên sandbox ra exit ≠ 0 và danh sách FAIL.
 - [x] 6. `repo-bootstrap.sh` phần 1: tạo repo public nếu chưa có, secret scanning + push protection, Dependabot alerts, token mặc định read-only, tắt cho Actions tạo/duyệt PR, ghim SHA; đọc → so → ghi. Kiểm: audit xanh các mục này; chạy lần hai in `0 thay đổi`.
-- [ ] 7. `repo-bootstrap.sh` phần 2: ruleset chặn force push và xóa nhánh (upsert theo tên), CodeQL default setup (xử lý repo không có ngôn ngữ hỗ trợ). Kiểm: audit xanh; `git push --force` vào `main` của sandbox bị từ chối.
-  - 2026-11-13: audit xanh trên sandbox; sửa tay ruleset (thêm `pull_request`) và quyền token thì audit FAIL 4 mục, bootstrap sửa 2 thay đổi, audit xanh lại. **Còn** thử `git push --force` vào `main` bị từ chối.
+- [x] 7. `repo-bootstrap.sh` phần 2: ruleset chặn force push và xóa nhánh (upsert theo tên), CodeQL default setup (xử lý repo không có ngôn ngữ hỗ trợ). Kiểm: audit xanh; `git push --force` vào `main` của sandbox bị từ chối.
+  - 2026-11-13: audit xanh trên sandbox; sửa tay ruleset (thêm `pull_request`) và quyền token thì audit FAIL 4 mục, bootstrap sửa 2 thay đổi, audit xanh lại. Chủ repo thử `git push --force` vào `main` của sandbox: bị ruleset từ chối.
 - [x] 8. Scaffold: `LICENSE` MIT, khối `.gitignore` chung (kubeconfig, `.env`, auth key Tailscale), `.github/dependabot.yml` theo ecosystem truyền vào; chèn không ghi đè. Kiểm: `git check-ignore -v` với tên file mẫu; chạy lần hai không có diff.
 - [x] 9. Áp cho `docs`, `platform`, `gitops`, `contracts`, push lần đầu; xóa sandbox. Kiểm: audit xanh cả 4 repo; chạy lần hai `0 thay đổi`.
-  - 2026-11-13: `docs`, `platform`, `gitops`, `contracts` đã public; bootstrap lần hai `0 thay đổi`, audit `Tất cả PASS` cả 4 repo; commit trên GitHub chỉ có email noreply. **Còn**: xóa sandbox sau khi thử force push ở bước 7.
+  - 2026-11-13: `docs`, `platform`, `gitops`, `contracts` đã public; bootstrap lần hai `0 thay đổi`, audit `Tất cả PASS` cả 4 repo; commit trên GitHub chỉ có email noreply. Sandbox đã xóa.
 
 ## Review
 
