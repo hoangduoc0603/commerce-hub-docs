@@ -4,7 +4,7 @@
 - Nối mỗi yêu cầu P0 trong [SRS](srs.md) với: thành phần sở hữu (theo [B1](../requirements-and-techniques.md#b1-bounded-context-và-service)), giai đoạn làm (theo [C18](../requirements-and-techniques.md#c18-lộ-trình-gợi-ý)), yêu cầu phi chức năng và Simulator liên quan, và kỹ thuật trọng tâm.
 - Cột **Thiết kế**, **Test** và **Trạng thái** được điền khi làm từng increment. Cập nhật bảng này là một phần của Definition of Done ([Charter](../project-charter.md#5-mô-hình-phát-triển-sdlc)).
 
-Thành phần sở hữu là đề xuất ban đầu và sẽ được chốt ở phase thiết kế. Theo B1, giai đoạn đầu có thể gộp một số service, ví dụ `workspace` gộp vào gateway và Keycloak.
+Thành phần sở hữu đã chốt cho G0–G1 ở phase thiết kế: mỗi service của B1 là một đơn vị triển khai riêng, không gộp ([arc42 mục 4.2](../architecture/04-solution-strategy.md#42-vì-sao-bỏ-modular-monolith)).
 
 ## 1. Yêu cầu chức năng
 

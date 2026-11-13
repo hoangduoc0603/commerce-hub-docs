@@ -11,6 +11,7 @@ Tài liệu cấp hệ thống của commerce-hub. Tài liệu riêng của mộ
 | `requirements/user-flows.md` | Các luồng người dùng chính của P0 |
 | `requirements/traceability.md` | Yêu cầu ↔ thành phần ↔ giai đoạn ↔ test |
 | `requirements-and-techniques.md` | Đầu vào cho thiết kế: đặc điểm các sàn (A2), thiết kế tổng quan (Phần B), kỹ thuật áp dụng và lộ trình (Phần C) |
+| `architecture/` | Kiến trúc theo arc42 + C4: bối cảnh, chiến lược, building block, khái niệm xuyên suốt, chỉ mục quyết định |
 | `research/` | Ghi chép tra cứu có nguồn, đặt tên `YYYY-MM-chu-de.md` |
 | `adr/` | Architecture Decision Records cấp hệ thống, đánh số `NNNN-ten-quyet-dinh.md` |
 | `experiments/` | Mỗi thí nghiệm một thư mục: giả thuyết, cách đo, số đo, kết luận |

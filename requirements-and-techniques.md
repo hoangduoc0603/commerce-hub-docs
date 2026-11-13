@@ -151,7 +151,7 @@ Vài quyết định cần làm rõ (mỗi cái nên có một ADR):
 - **Vì sao tách webhook-ingress khỏi channel-connector?** Hai việc có yêu cầu vận hành ngược nhau. Ingress cần độ trễ thấp, ổn định, không phụ thuộc gì (để không bị sàn tắt subscription). Connector thì chậm, phụ thuộc sàn, hay bị rate limit. Tách ra để scale và deploy độc lập, và để connector có sập thì ingress vẫn nhận push.
 - **Vì sao inventory tách khỏi catalog?** Tồn kho có tần suất ghi cao và yêu cầu nhất quán chặt. Catalog ít ghi, đọc nhiều. Gộp lại thì lock của tồn kho ảnh hưởng tới catalog.
 - **Ranh giới canonical:** chỉ channel-connector biết khái niệm của từng sàn (`ordersn`, `shop_cipher`, `model_id`). Mọi service khác chỉ thấy model canonical.
-- **Không bắt đầu với đủ 10 service.** Giai đoạn 1 có thể gộp workspace vào gateway/Keycloak, gộp reporting vào order. Tách ra khi có lý do (xem lộ trình C18).
+- ~~**Không bắt đầu với đủ 10 service.**~~ Đã bỏ: mỗi giai đoạn có đủ service nó cần, không gộp. Giai đoạn 1 có gateway, workspace, channel-connector, catalog, inventory, order; `workspace` không gộp vào gateway hay Keycloak. Lý do ở [arc42 mục 4.2](architecture/04-solution-strategy.md#42-vì-sao-bỏ-modular-monolith).
 
 ## B2. Event chính
 
@@ -235,7 +235,7 @@ Phiên bản nền: Java 25, **Spring Boot 4.1.x** (cùng dòng với `sp-jpa`).
 | **Canonical data model** | Order status, product/variant, stock | Một mô hình chung, mỗi sàn ánh xạ vào |
 | **API Gateway** | gateway | Một cổng vào: xác thực, rate limit theo Workspace, định tuyến |
 | **BFF** | Next.js server (route handler) | Giữ token OIDC ở server, trình duyệt chỉ có cookie phiên; proxy mỏng `/api/*` xuống gateway, không gom dữ liệu ở G1 ([ADR-0011](adr/0011-nextjs-bff-with-server-side-session.md)) |
-| **Modular monolith trước, tách sau** | Giai đoạn đầu | Học được cách chọn ranh giới. Tách khi có số đo chứng minh cần (scale khác nhau, deploy khác nhau) |
+| ~~**Modular monolith trước, tách sau**~~ | Không dùng | Đã bỏ: tách service theo B1 ngay từ Giai đoạn 1. Lý do ở [arc42 mục 4.2](architecture/04-solution-strategy.md#42-vì-sao-bỏ-modular-monolith) |
 | **ADR** | `adr/` của repo `docs` (cấp hệ thống) và `docs/adr/` trong từng repo service | Ghi lại quyết định và lý do. Đây là chất liệu tốt cho phỏng vấn |
 
 ## C2. Giao tiếp đồng bộ
