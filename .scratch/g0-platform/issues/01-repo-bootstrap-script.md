@@ -16,13 +16,13 @@ Chủ repo tạo và cấu hình mọi repo của commerce-hub bằng một lệ
 
 ## Tiêu chí nghiệm thu
 
-- [ ] Chạy script trên một repo mới: repo public, có LICENSE MIT, `.gitignore` chặn kubeconfig, `.env`, auth key Tailscale.
-- [ ] Nhánh mặc định chỉ chặn force push và xóa; không bắt PR, không bắt status check.
-- [ ] Secret scanning, push protection, CodeQL default setup đều bật; Dependabot có `github-actions` và ecosystem của repo.
-- [ ] Không bật "Allow GitHub Actions to create and approve pull requests".
-- [ ] Ghi kết quả ba điểm **chưa xác minh** vào [ci-cd.md](../../../standards/ci-cd.md): ruleset trên tài khoản cá nhân; policy ghim SHA ở mức owner hay chỉ mức repo; `actions.lock` có trên gói Free không.
-- [ ] Commit thử bằng email thật bị chặn khi push ("Block command line pushes that expose my email"). _Sửa 2026-11-13: GH007 không chặn email chưa thêm vào tài khoản (xem Lộ trình bước 3). Tiêu chí thay bằng: `repo-audit.sh` FAIL khi history có author/committer không phải noreply._
-- [ ] Script chạy lại lần hai không đổi gì.
+- [x] Chạy script trên một repo mới: repo public, có LICENSE MIT, `.gitignore` chặn kubeconfig, `.env`, auth key Tailscale.
+- [x] Nhánh mặc định chỉ chặn force push và xóa; không bắt PR, không bắt status check.
+- [x] Secret scanning, push protection, CodeQL default setup đều bật; Dependabot có `github-actions` và ecosystem của repo.
+- [x] Không bật "Allow GitHub Actions to create and approve pull requests".
+- [x] Ghi kết quả ba điểm **chưa xác minh** vào [ci-cd.md](../../../standards/ci-cd.md): ruleset trên tài khoản cá nhân; policy ghim SHA ở mức owner hay chỉ mức repo; `actions.lock` có trên gói Free không.
+- [x] Commit thử bằng email thật bị chặn khi push ("Block command line pushes that expose my email"). _Sửa 2026-11-13: GH007 không chặn email chưa thêm vào tài khoản (xem Lộ trình bước 3). Tiêu chí thay bằng: `repo-audit.sh` FAIL khi history có author/committer không phải noreply._
+- [x] Script chạy lại lần hai không đổi gì.
 
 ## Lộ trình
 
@@ -40,4 +40,17 @@ Seam kiểm cho cả ticket: `repo-audit.sh` đọc trạng thái repo qua API, 
 - [ ] 7. `repo-bootstrap.sh` phần 2: ruleset chặn force push và xóa nhánh (upsert theo tên), CodeQL default setup (xử lý repo không có ngôn ngữ hỗ trợ). Kiểm: audit xanh; `git push --force` vào `main` của sandbox bị từ chối.
   - 2026-11-13: audit xanh trên sandbox; sửa tay ruleset (thêm `pull_request`) và quyền token thì audit FAIL 4 mục, bootstrap sửa 2 thay đổi, audit xanh lại. **Còn** thử `git push --force` vào `main` bị từ chối.
 - [x] 8. Scaffold: `LICENSE` MIT, khối `.gitignore` chung (kubeconfig, `.env`, auth key Tailscale), `.github/dependabot.yml` theo ecosystem truyền vào; chèn không ghi đè. Kiểm: `git check-ignore -v` với tên file mẫu; chạy lần hai không có diff.
-- [ ] 9. Áp cho `docs`, `platform`, `gitops`, `contracts`, push lần đầu; xóa sandbox. Kiểm: audit xanh cả 4 repo; chạy lần hai `0 thay đổi`.
+- [x] 9. Áp cho `docs`, `platform`, `gitops`, `contracts`, push lần đầu; xóa sandbox. Kiểm: audit xanh cả 4 repo; chạy lần hai `0 thay đổi`.
+  - 2026-11-13: `docs`, `platform`, `gitops`, `contracts` đã public; bootstrap lần hai `0 thay đổi`, audit `Tất cả PASS` cả 4 repo; commit trên GitHub chỉ có email noreply. **Còn**: xóa sandbox sau khi thử force push ở bước 7.
+
+## Review
+
+`code-review` (high) trên `platform/scripts/github` ra 8 điểm, đã sửa cả 8: chạy lại không truyền `--ecosystems` làm mất ecosystem cũ; audit thoát im lặng khi API lỗi; PUT gửi `allowed_actions: null` khi Actions tắt; không kiểm `origin` trỏ đúng repo; quét history bỏ sót tagger của annotated tag; lỗi API bị coi là "chưa có ruleset"; danh sách ecosystem không bỏ khoảng trắng; tính `ecosystems_json` hai lần.
+
+## Bài học
+
+- Lớp chặn của GitHub hẹp hơn tên gọi. "Block command line pushes that expose my email" chỉ xét commit mới nhất và chỉ email đã thêm vào tài khoản; thử thật thì email công ty đi qua. Lớp chặn thật nằm ở máy (`includeIf`) và ở bước quét history trước lần push đầu.
+- Docs nói thiếu thì thử, đừng suy. Trang rulesets chỉ nhắc Team/Enterprise nhưng ruleset chạy trên Free; `actions.lock` không ghi GA nhưng chứng minh được bằng đối chứng (có lockfile xanh, bỏ lockfile đỏ "must be pinned to a full-length commit SHA").
+- Idempotent là đọc → so → chỉ ghi khi lệch, không phải gọi PUT lại. So sánh JSON phải chuẩn hóa thứ tự key (`jq -S`), và đếm thay đổi không được chạy trong subshell của pipe.
+- Câu chuyện phỏng vấn: "15 repo public trên tài khoản cá nhân, cần vệ sinh đồng nhất. Một script `gh api` idempotent cùng một audit PASS/FAIL. Thử sửa tay ruleset thêm `pull_request` thì audit FAIL 4 mục, bootstrap sửa đúng 2 thay đổi, chạy lại `0 thay đổi`. Trên đường đi phát hiện GH007 không chặn email ngoài tài khoản, phải viết lại history 22 commit trước khi push."
+
