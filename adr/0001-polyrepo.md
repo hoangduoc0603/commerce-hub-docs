@@ -28,7 +28,7 @@ Phương án ban đầu là monorepo với một Gradle multi-project build. Ph�
 
 Phải trả:
 
-- Mất kiểm tra lúc compile xuyên service. Bù bằng kiểm tương thích schema trong CI của `contracts` (Schema Registry, mặc định `BACKWARD`: nâng consumer trước, producer sau), Pact cho REST, và e2e trên cụm.
+- Mất kiểm tra lúc compile xuyên service. Bù bằng kiểm tương thích schema trong CI của `contracts` (Schema Registry, `BACKWARD_TRANSITIVE` theo [ticket 09](../.scratch/architecture-g0-g1/issues/09-g1-contracts.md#answer) và [arc42 mục 8.5](../architecture/08-crosscutting-concepts.md#85-event-và-kafka); bản đầu của ADR này ghi `BACKWARD`: nâng consumer trước, producer sau), Pact cho REST, và e2e trên cụm.
 - Đổi xuyên hệ thống thành nhiều PR theo thứ tự expand/contract.
 - Cấu hình build và CI lặp ở nhiều repo. Bù bằng template repo cho service, reusable workflow trong `platform`, Renovate hoặc Dependabot để nâng version.
 
