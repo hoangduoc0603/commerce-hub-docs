@@ -1,7 +1,7 @@
 # 16 Cửa vào cụm: Gateway API, TLS và hostname của lab
 
 Type: research
-Status: open
+Status: resolved
 Blocked by:
 Map: [Kiến trúc G0–G1](../map.md)
 
@@ -18,4 +18,19 @@ Cần chốt, kèm checklist có nguồn trong `docs/standards/` (ví dụ `clus
 - Danh sách hostname ở G0–G1 và từ G2: `app.`, `auth.`, `shopee-sim.`, `tiktok-sim.`, `webhook-ingress`; các UI vận hành (Grafana, Argo CD, Mailpit) mở qua cửa này hay `port-forward`.
 - Mailpit ở lab chạy ở đâu và tốn bao nhiêu RAM (chưa có trong ngân sách ticket 04).
 
+## Answer
+
+Chốt 2026-11-13 (người dùng trả lời Q1–Q9, theo đề xuất của [tra cứu](../../../research/2026-11-cluster-entry.md#đề-xuất-cho-ticket-16)):
+- **API và implementation:** Gateway API (CRD standard v1.6.1), Envoy Gateway v1.10.0, Envoy 1 replica, limit đặt tay → [ADR-0013](../../../adr/0013-gateway-api-envoy-gateway-shared-edge.md).
+- **Sở hữu:** một Gateway `edge` (namespace `edge`) do app `platform` sở hữu, wildcard `*.lab.internal`, redirect HTTP sang HTTPS. Chart `app` sinh `HTTPRoute`, tự mở NetworkPolicy cho pod Envoy. Gắn route bằng `allowedRoutes: Selector` theo nhãn namespace, không `ReferenceGrant`.
+- **TLS:** CA nội bộ, root offline có name constraints, intermediate trong cụm làm `ClusterIssuer lab-ca` → [ADR-0014](../../../adr/0014-lab-pki-and-dns.md).
+- **Tin CA:** Keychain trên Mac; trust-manager v0.26.0 sinh truststore toàn JVM; `NODE_EXTRA_CA_CERTS` cho Node. Chart `app` lo mount và đặt biến.
+- **Domain và DNS:** `lab.internal`; dnsmasq trên `gw` (wildcard về `10.20.0.200`), split DNS Tailscale, block CoreDNS.
+- **Hostname:** G0–G1 `app.`, `auth.`, `shopee-sim.`, `argocd.`, `grafana.`, `kc-admin.`; G2 thêm `tiktok-sim.`, `webhooks.`. Prometheus, Alertmanager, admin API của simulator dùng `port-forward`.
+- **Keycloak:** re-encrypt bằng `BackendTLSPolicy` v1; route công khai chỉ `/realms/commerce-hub`, `/resources/`, `/.well-known/`; admin ở `kc-admin.`; test giả mạo `X-Forwarded-For` bắt buộc.
+- **Mailpit:** v1.33.1 trên `gw` (systemd, `MemoryMax=128M`), SMTP `10.20.0.5:1025`.
+- **RAM:** thêm khoảng 480 MiB; biên của lab còn khoảng 520 MiB (ADR-0004).
+
 ## Comments
+- 2026-11-13: Khi resolve, sửa theo các chỗ đang ghi "Ingress": ticket [11](11-service-template.md) (chart `app`), [12](12-shopee-sim.md) (định tuyến `marketplace-sim`), và đối chiếu [keycloak.md](../../../standards/keycloak.md) (HTTPRoute).
+- 2026-11-13: Research xong, xem [tra cứu](../../../research/2026-11-cluster-entry.md) và [chuẩn](../../../standards/cluster-entry.md). Đề xuất Gateway API (CRD v1.6.1 standard) với Envoy Gateway v1.10.0, bản duy nhất trong nhóm ghi hỗ trợ K8s 1.37 mà nhẹ (benchmark 10 route: controller khoảng 134 MiB, Envoy khoảng 18 MiB; limit đề xuất tổng 480 MiB gồm cả trust-manager). Gateway `edge` do `platform` sở hữu, chart `app` sinh HTTPRoute. TLS dùng CA nội bộ (root offline có name constraints, intermediate trong cụm), Keycloak re-encrypt bằng `BackendTLSPolicy` v1. Domain `lab.internal` phân giải bằng dnsmasq trên `gw` cộng split DNS của Tailscale cộng CoreDNS. Mailpit v1.33.1 chạy trên `gw`. Nên viết 2 ADR (cửa vào; PKI và DNS).

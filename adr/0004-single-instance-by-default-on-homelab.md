@@ -20,6 +20,6 @@ Chart dùng chung vẫn giữ `replicaCount: 2` mặc định theo [zero-downtim
 
 - Rollout hoặc drain node làm service, PostgreSQL và Keycloak gián đoạn. N15 chỉ chứng minh được trong thí nghiệm đã scale lên 2. Chart không render PDB khi chỉ có 1 replica ([helm-chart.md](../standards/helm-chart.md)).
 - PostgreSQL 1 instance thì không có replica đồng bộ. RPO dựa vào WAL archive lên RustFS (`archive_timeout: 1min`, N10), và mất node chứa primary là mất ghi tới khi khôi phục. Drain node chứa `pg-main` có thể bị PDB của CNPG chặn. Cách xử lý (`enablePDB: false` hoặc `nodeMaintenanceWindow`) **chưa xác minh**, cần thử khi dựng G0.
-- Chỉ còn dư khoảng 1 GiB. Thí nghiệm cần thêm RAM phải tạm scale về 0 các service không liên quan. Mỗi bản ghi thí nghiệm ghi rõ đã scale gì.
+- Chỉ còn dư khoảng 520 MiB sau khi thêm cửa vào cụm ([ADR-0013](0013-gateway-api-envoy-gateway-shared-edge.md), cập nhật 2026-11-13; trước đó khoảng 1 GiB). Thí nghiệm cần thêm RAM phải tạm scale về 0 các service không liên quan. Mỗi bản ghi thí nghiệm ghi rõ đã scale gì.
 - Mọi số trong ngân sách là ước lượng. Đo service "hello" và hạ tầng ở G0 (`kubectl top`, RSS JVM). Nếu JVM 512 Mi không đủ thì xét lại ADR này trước khi bắt đầu G1.
 - Xét lại khi: máy có thêm RAM, hoặc số đo cho thấy ngân sách sai quá 1 GiB.

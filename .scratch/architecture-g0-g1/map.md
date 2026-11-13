@@ -32,13 +32,11 @@ Ngày mở: 2026-11-12
 - [13 Vòng phát triển local](issues/13-dev-loop.md): hạ tầng dev là `platform/compose` trên Mac (Kafka 1 broker, Apicurio, PG 18, PgBouncer, Keycloak); service chạy trên host với profile `local`, Mac không ghi vào lab. Realm và topic đọc từ checkout `../gitops`; schema đăng ký bằng lệnh của `contracts`, không auto-register. Testcontainers chạy cả trên Mac lẫn CI; `ct install` chạy trên kind trong CI. Không dùng Tilt, Skaffold, Telepresence. Luồng đầy đủ kiểm trên lab; `workspace` tạo dữ liệu khởi đầu ở profile `local`. Profile `obs` tùy chọn.
 - [14 Khung arc42 và C4 Context/Container](issues/14-arc42-c4.md): [`docs/architecture/`](../../architecture/README.md) có arc42 mục 1–5, 8–9 và C4 Context, Container (Mermaid). Mục 4.2 ghi lý do bỏ modular monolith; C1, B1 và ma trận truy vết đã trỏ về đó. Mở ticket 16 vì cửa vào cụm chưa chốt.
 - [15 Repo public hay private](issues/15-repo-visibility.md): mọi repo public trên tài khoản cá nhân (Free, MIT), CI dùng GitHub-hosted runner vào lab qua Tailscale, nhánh chỉ chặn force push/xóa (ADR-0006).
+- [16 Cửa vào cụm: Gateway API, TLS và hostname của lab](issues/16-cluster-entry.md): Gateway API với Envoy Gateway v1.10.0, một Gateway `edge` do `platform` sở hữu, chart `app` sinh HTTPRoute (ADR-0013). CA nội bộ root offline, `lab.internal` phân giải qua dnsmasq trên `gw`, trust-manager cho JVM; Keycloak re-encrypt, chỉ mở realm `commerce-hub`; Mailpit trên `gw` (ADR-0014). Biên RAM còn khoảng 520 MiB.
 
 ## Not yet specified
 
-- Chiến lược test của G1: có contract test (Pact) ngay chưa, e2e chạy ở đâu (ticket 13 đã chốt luồng đầy đủ kiểm trên lab, không chạy trên Mac). Có property-based test cho bất biến sổ cái BR-29 và test race thứ tự khóa (từ ticket 10). Test N11 đã chốt ba tầng ở ticket 06. Ticket 13 đã chốt Testcontainers chạy cả trên Mac lẫn CI; PgBouncer dùng `ghcr.io/cloudnative-pg/pgbouncer` (có arm64). Từ ticket 07: e2e đi qua BFF (đăng nhập thật bằng Keycloak), test refresh song song trên cùng phiên, test backchannel logout cho AC của F1.1b.
-- `channel-connector` ở G1: polling đơn F5.2b (job chạy đơn instance hay chia theo shop, checkpoint lưu đâu; thứ tự đã chốt ở ticket 08: gửi, chờ ack, rồi mới dời checkpoint) và cách mã hóa token sàn khi lưu (N11: khóa ở đâu, xoay khóa; `seller-web` đã có mẫu AES-GCM với `key_id` ở ADR-0011). Từ ticket 14.
-- Bộ test tuân thủ của simulator so với connector: dựng từ ví dụ trong tài liệu Shopee, chạy ở CI của repo nào, và có dùng làm contract test cho adapter của connector không (gắn với chiến lược test G1).
-- Chi tiết gateway: Spring Cloud Gateway bản WebFlux hay MVC, rate limit theo Workspace ở G1 hay để sau. Ticket 05 đã chốt gateway chỉ kiểm JWT và định tuyến, không kiểm Member. Ticket 07 đã chốt gateway là ClusterIP, chỉ nhận traffic từ `seller-web`, không cấu hình CORS, và SSE ở G2 đi qua nó (timeout, buffering).
+<!-- Trống: fog đã chuyển thành ticket 17, 18, 19 ngày 2026-11-13. -->
 
 ## Out of scope
 

@@ -11,6 +11,7 @@ flowchart TB
     user["<b>Owner / Member</b><br/>[Người, trình duyệt]"]
 
     subgraph hub["commerce-hub (cụm home lab)"]
+        edge["<b>edge</b><br/>[Container: Envoy Gateway v1.10.0, Gateway API]<br/>Cửa vào cụm, 10.20.0.200. Kết thúc TLS<br/>*.lab.internal, định tuyến theo HTTPRoute"]
         web["<b>seller-web</b><br/>[Container: Next.js 16.4, Node]<br/>Giao diện + BFF mỏng. Giữ phiên và token<br/>ở server, proxy /api/* xuống gateway"]
         kc["<b>Keycloak</b><br/>[Container: Keycloak 26.8.2]<br/>Realm commerce-hub. Chỉ xác thực Account"]
         gw["<b>gateway</b><br/>[Container: Spring Cloud Gateway]<br/>ClusterIP. Kiểm JWT, định tuyến"]
@@ -23,17 +24,18 @@ flowchart TB
     end
 
     sim["<b>marketplace-sim</b><br/>[Hệ thống ngoài, Spring Boot]<br/>Giả lập Shopee (G1), TikTok (G2)"]
-    mail["<b>Mailpit</b><br/>[Hệ thống ngoài]"]
+    mail["<b>Mailpit</b><br/>[Hệ thống ngoài, trên VM gw]"]
 
-    user -- "HTTPS app.&lt;domain-lab&gt;<br/>cookie phiên" --> web
-    user -- "HTTPS auth.&lt;domain-lab&gt;<br/>đăng nhập, đăng ký" --> kc
-    user -- "Trang ủy quyền Shop" --> sim
+    user -- "HTTPS *.lab.internal" --> edge
+    edge -- "app.lab.internal<br/>cookie phiên" --> web
+    edge -- "auth.lab.internal, đăng nhập, đăng ký<br/>[re-encrypt]" --> kc
+    edge -- "shopee-sim.lab.internal<br/>trang ủy quyền Shop, API" --> sim
     web -- "OIDC code + PKCE, refresh<br/>[confidential client]" --> kc
     kc -- "Backchannel logout<br/>[trong cụm]" --> web
     web -- "REST /&lt;path&gt;, Bearer,<br/>X-Workspace-Id" --> gw
     gw -- "REST" --> ws & cc & cat & inv & ord
     cat -- "Đặt số tồn (F3.3c)<br/>[REST, client credentials]" --> inv
-    cc -- "Shopee Open API v2<br/>[HTTPS, ký HMAC]" --> sim
+    cc -- "Shopee Open API v2<br/>[HTTPS shopee-sim.lab.internal, ký HMAC]" --> edge
     kc -- "SMTP" --> mail
     web & ws & cc & cat & inv & ord -- "SQL" --> pg
     kc -- "SQL, pg-main-rw" --> pg
@@ -43,10 +45,12 @@ flowchart TB
     classDef db fill:#438dd5,stroke:#2e6295,color:#fff
     classDef external fill:#999,stroke:#6b6b6b,color:#fff
     class user person
-    class web,kc,gw,ws,cc,cat,inv,ord container
+    class edge,web,kc,gw,ws,cc,cat,inv,ord container
     class pg db
     class sim,mail external
 ```
+
+`edge` là Gateway (Gateway API, Envoy) ở cửa vào cụm, khác container `gateway` (Spring Cloud Gateway) đứng sau `seller-web`. Request của người dùng đi trình duyệt → `edge` → `seller-web` → `gateway` → service ([ADR-0013](../adr/0013-gateway-api-envoy-gateway-shared-edge.md)). Pod gọi `*.lab.internal` (như `channel-connector` gọi simulator) cũng đi qua `edge`.
 
 ### 5.1.2 Luồng event qua Kafka
 
@@ -78,6 +82,7 @@ Kafka chạy bằng Strimzi (3 broker KRaft, RF 3, `min.insync.replicas` 2), sch
 
 | Container | Công nghệ | Trách nhiệm ở G1 | Dữ liệu sở hữu (database riêng trên `pg-main`) | Phát | Nhận |
 |---|---|---|---|---|---|
+| `edge` | Envoy Gateway v1.10.0, Gateway API v1.6.1 | Cửa vào cụm: kết thúc TLS bằng chứng chỉ wildcard `*.lab.internal`, redirect HTTP sang HTTPS, định tuyến theo `HTTPRoute` của từng app, re-encrypt tới Keycloak. App `platform` sở hữu | — | — | — |
 | `seller-web` | Next.js 16.4, `openid-client` 6, TanStack Query, driver `pg` | Giao diện tiếng Việt. BFF mỏng: phiên, refresh, CSRF, proxy 1:1 `/api/*`. Không gom dữ liệu, không logic nghiệp vụ. Trình duyệt tự gom dữ liệu của hai service | `seller_web`: bảng phiên, token mã hóa AES-GCM. Không có `workspace_id` (phiên thuộc Account) | — | — |
 | `gateway` | Spring Cloud Gateway; bản WebFlux hay MVC chưa chốt | Kiểm JWT, định tuyến tới service. Chỉ nhận traffic từ `seller-web`. Không CORS, không kiểm Member | — | — | — |
 | `workspace` | Spring Boot 4.1, JPA | Account (tạo JIT ở `GET /me`), Workspace, Member, Role, Scope (F1.1a–c, F1.2a–b). Cổng `email_verified` khi tạo Workspace. Lệnh phát lại Member | Account (bảng toàn cục, không RLS), Workspace, Member | `workspace.members` | — |
@@ -103,9 +108,10 @@ Không vẽ trong sơ đồ vì mọi container đều dùng:
 
 - **Argo CD** 3.6.1: đồng bộ cụm từ repo `gitops`, app-of-apps cộng `ApplicationSet` cho service.
 - **Sealed Secrets**: secret nằm trong `gitops` ở dạng đã mã hóa.
-- **cert-manager**: cần cho plugin Barman Cloud.
+- **cert-manager**: cần cho plugin Barman Cloud và cấp chứng chỉ wildcard `*.lab.internal` của `edge` từ `ClusterIssuer lab-ca` (intermediate của CA nội bộ, [ADR-0014](../adr/0014-lab-pki-and-dns.md)).
+- **trust-manager** v0.26.0: sinh trust bundle (root CA của lab cộng CA công khai) để chart `app` mount cho JVM và Node ([mục 8.15](08-crosscutting-concepts.md#813-cửa-vào-cụm-pki-và-trust)).
 - **LGTM**: OTel Collector (DaemonSet), Prometheus, Alertmanager, Loki (monolithic), Tempo, Grafana.
-- **Cửa vào cụm** cho `app.`, `auth.`, `shopee-sim.`: chưa chốt ([ticket 16](../.scratch/architecture-g0-g1/issues/16-cluster-entry.md)).
+- **Envoy Gateway** v1.10.0 (CRD Gateway API v1.6.1): controller của Gateway `edge` (pod Envoy vẽ ở 5.1.1). App `platform` sở hữu CRD, `GatewayClass envoy`, `EnvoyProxy`, Gateway `edge` và route của Keycloak, Argo CD, Grafana; chart `app` chỉ sinh `HTTPRoute` ([ADR-0013](../adr/0013-gateway-api-envoy-gateway-shared-edge.md)).
 
 Cỡ của từng thành phần ở ticket [04](../.scratch/architecture-g0-g1/issues/04-resource-budget.md#answer).
 

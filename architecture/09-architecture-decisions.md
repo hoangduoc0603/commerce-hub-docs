@@ -18,6 +18,8 @@ Mỗi ADR ghi một quyết định khó đảo ngược, có trade-off thật. 
 | [0010](../adr/0010-workspace-isolation-shared-schema-with-mandatory-rls.md) | Shared schema, RLS `FORCE` bắt buộc, bốn role mỗi database, không `BYPASSRLS` ở role đăng nhập được | Cô lập Workspace |
 | [0011](../adr/0011-nextjs-bff-with-server-side-session.md) | Next.js làm BFF mỏng, phiên ở Postgres; chỉ `seller-web` và Keycloak ra ngoài cụm | Bảo mật dữ liệu (N11) |
 | [0012](../adr/0012-two-persistence-stacks-one-rls-hook.md) | `JdbcClient` cho service có thao tác khó, JPA cho service CRUD, một hook RLS chung | Đúng đắn, cô lập Workspace |
+| [0013](../adr/0013-gateway-api-envoy-gateway-shared-edge.md) | Cửa vào cụm là Gateway API với Envoy Gateway, một Gateway `edge` do `platform` sở hữu; chart `app` chỉ sinh `HTTPRoute` | Bảo mật, vừa tài nguyên |
+| [0014](../adr/0014-lab-pki-and-dns.md) | Domain `lab.internal`, CA nội bộ có root offline, trust-manager cấp truststore toàn JVM; DNS bằng dnsmasq trên `gw` | Bảo mật, dựng lại cụm không phải tin lại root |
 
 ## 9.2 Quyết định không có ADR
 
@@ -30,9 +32,10 @@ Các quyết định sau đổi lại được mà không tốn nhiều công, n
 | Danh mục event, topic, API; envelope; tiền và thời gian; ranh giới N13 | Contract tiến hóa theo `BACKWARD_TRANSITIVE`; ID tất định là phần khó đảo ngược và có ADR-0009 | [09](../.scratch/architecture-g0-g1/issues/09-g1-contracts.md#answer) |
 | Template service, `service-kit`, chart `app`, retry/DLT, quy ước REST, GitHub Packages | Đổi qua version của artifact; đổi registry chỉ là sửa URL | [11](../.scratch/architecture-g0-g1/issues/11-service-template.md#answer) |
 | Một pod `marketplace-sim` cho cả hai sàn, core và dialect | Image đã là một; tách ra chỉ cần thêm Deployment | [12](../.scratch/architecture-g0-g1/issues/12-shopee-sim.md#answer) |
+| Danh sách hostname qua `edge`; Mailpit chạy trên `gw` | Thêm hoặc bớt route, đổi chỗ Mailpit đều rẻ | [16](../.scratch/architecture-g0-g1/issues/16-cluster-entry.md#answer) |
 | Vòng dev: compose trên Mac, Testcontainers, `ct install` trên kind | Không ảnh hưởng runtime của lab | [13](../.scratch/architecture-g0-g1/issues/13-dev-loop.md#answer) |
 | Instrument bằng Micrometer + OTLP, không OTel agent | Đổi dependency và cấu hình | [01](../.scratch/architecture-g0-g1/issues/01-infra-standards.md#answer), [observability.md](../standards/observability.md) |
 
 ## 9.3 Còn mở ở G0–G1
 
-Theo [map](../.scratch/architecture-g0-g1/map.md): cửa vào cụm ([ticket 16](../.scratch/architecture-g0-g1/issues/16-cluster-entry.md)), chi tiết gateway, chiến lược test G1, polling đơn và mã hóa token ở `channel-connector`, bộ test tuân thủ của simulator. Ba câu hỏi mở ở [SRS chương 9](../requirements/srs.md#9-giả-định-và-câu-hỏi-mở) thuộc G3–G5.
+Theo [map](../.scratch/architecture-g0-g1/map.md): chi tiết gateway, chiến lược test G1, polling đơn và mã hóa token ở `channel-connector`, bộ test tuân thủ của simulator. Ba câu hỏi mở ở [SRS chương 9](../requirements/srs.md#9-giả-định-và-câu-hỏi-mở) thuộc G3–G5.

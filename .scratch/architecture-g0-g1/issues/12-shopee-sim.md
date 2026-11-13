@@ -21,9 +21,9 @@ Chốt ngày 2026-11-12 (người dùng), sau hai vòng grilling. Mục tiêu l�
 
 1. **Một repo `simulators/marketplace-sim`, một deployable phục vụ cả hai sàn cùng lúc**. Điều này khớp ADR-0001, nơi `marketplace-sim` chứa cả TikTok Shop và Shopee. Tên `shopee-sim` ở ticket 02 và ticket 04 đổi thành `marketplace-sim`. G2 thêm TikTok không thêm pod nào, ngân sách vẫn 512 Mi.
 2. **Module**: `sim-core` cộng mỗi sàn một dialect (`dialect-shopee` ở G1, `dialect-tiktok` ở G2), tất cả build thành một image.
-3. **Định tuyến**: Ingress có hai hostname (`shopee-sim.<lab-domain>`, `tiktok-sim.<lab-domain>`, có TLS) cùng trỏ về một Service. Ứng dụng chia request cho dialect theo đường dẫn (Shopee `/api/v2/...`; TikTok `/authorization/...`, `/order/202309/...`) và không đọc header `Host`. Có một test chặn trường hợp route của hai dialect trùng nhau.
+3. **Định tuyến**: một `HTTPRoute` gắn vào Gateway `edge` (TLS kết thúc ở `edge`, [ADR-0013](../../../adr/0013-gateway-api-envoy-gateway-shared-edge.md)) có nhiều hostname (`shopee-sim.lab.internal` ở G1, thêm `tiktok-sim.lab.internal` từ G2) cùng trỏ về một Service. Ứng dụng chia request cho dialect theo đường dẫn (Shopee `/api/v2/...`; TikTok `/authorization/...`, `/order/202309/...`) và không đọc header `Host`. Có một test chặn trường hợp route của hai dialect trùng nhau.
 4. **Nút "sàn sập N phút" (SIM-17)** làm trong ứng dụng, áp cho từng dialect (trả 503 hoặc timeout). Không kill pod, vì kill pod thì cả hai sàn cùng sập.
-5. **Triển khai** như service thường: chart chung (tên chốt ở ticket 11), Argo CD, namespace riêng `simulators`. Connector dùng hostname Ingress làm base URL, vì trang ủy quyền (SIM-04) phải mở được từ trình duyệt, và Shopee phục vụ trang ủy quyền với API trên cùng host.
+5. **Triển khai** như service thường: chart chung (tên chốt ở ticket 11), Argo CD, namespace riêng `simulators`. Connector dùng hostname của HTTPRoute làm base URL, vì trang ủy quyền (SIM-04) phải mở được từ trình duyệt, và Shopee phục vụ trang ủy quyền với API trên cùng host.
 
 ### Ranh giới core / dialect
 
@@ -64,3 +64,6 @@ ADR-0001 đã chốt `marketplace-sim` là một repo. Gộp hai sàn vào một
 
 - Simulator ghi chung `pg-main` với hệ thống đang được đo, nên ở G5 (500 đơn/s) có thể làm nhiễu N6. Đã ghi vào mục Out of scope của map (thuộc G5), xem lại khi có số đo.
 - Seed tất định (SIM-22), webhook (SIM-14, SIM-15) và việc không truyền trace context (SIM-23) thuộc G2–G3.
+
+## Comments
+- 2026-11-13: Sửa theo ticket [16](16-cluster-entry.md#answer): Ingress → HTTPRoute nhiều hostname, `<lab-domain>` → `lab.internal`, base URL là hostname của HTTPRoute (ADR-0013, ADR-0014).

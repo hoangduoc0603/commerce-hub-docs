@@ -1,8 +1,8 @@
 # Chuẩn: Triển khai không gián đoạn (zero-downtime)
 
-- Ngày tra: 2026-11-12
-- Phiên bản áp dụng: Kubernetes 1.37 (kube-proxy, Calico, MetalLB), Spring Boot 4.1.2, Spring for Apache Kafka 4.1.2, Apache Kafka 4.x, k6 v2.3.0
-- Phạm vi: Deployment của mọi service Spring Boot (render từ chart [`spring-service`](helm-chart.md)), cấu hình `application.yaml` phần shutdown/probe, và thí nghiệm chứng minh yêu cầu **N15** (SRS: deploy, kể cả migration DB, không mất webhook và không lỗi request). Liên quan: **N16** (kill pod không làm sai sổ cái, không mất/nhân đôi Reservation)
+- Ngày tra: 2026-11-12; cập nhật 2026-11-13 theo ticket 16 và [ADR-0013](../adr/0013-gateway-api-envoy-gateway-shared-edge.md) (tải đi qua Gateway `edge`)
+- Phiên bản áp dụng: Kubernetes 1.37 (kube-proxy, Calico, MetalLB), Spring Boot 4.1.2, Spring for Apache Kafka 4.1.2, Apache Kafka 4.x, k6 v2.3.0, Envoy Gateway v1.10.0 (Gateway `edge`)
+- Phạm vi: Deployment của mọi service Spring Boot (render từ chart [`app`](helm-chart.md)), cấu hình `application.yaml` phần shutdown/probe, và thí nghiệm chứng minh yêu cầu **N15** (SRS: deploy, kể cả migration DB, không mất webhook và không lỗi request). Liên quan: **N16** (kill pod không làm sai sổ cái, không mất/nhân đôi Reservation)
 
 ## Checklist
 
@@ -13,7 +13,7 @@
 - [ ] Giữ `progressDeadlineSeconds` (mặc định 600) lớn hơn `minReadySeconds`; CI hoặc Argo CD theo dõi `kubectl rollout status`. Rollout kẹt được báo `ProgressDeadlineExceeded` thay vì treo im lặng. [Kubernetes – Deployments: Progress Deadline Seconds](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#progress-deadline-seconds)
 
 ### Probe và nhóm health của Actuator
-- [ ] Actuator chạy ở cổng quản trị riêng (`management.server.port: 8081`, không mở qua Ingress) và `management.endpoint.health.probes.add-additional-paths: true`, để probe gọi `/livez` và `/readyz` trên **cổng chính 8080**. Probe ở cổng quản trị có thể pass trong khi cổng chính không nhận kết nối. [Spring Boot – Kubernetes Probes](https://docs.spring.io/spring-boot/reference/actuator/endpoints.html#actuator.endpoints.kubernetes-probes)
+- [ ] Actuator chạy ở cổng quản trị riêng (`management.server.port: 8081`, không mở qua Gateway `edge`) và `management.endpoint.health.probes.add-additional-paths: true`, để probe gọi `/livez` và `/readyz` trên **cổng chính 8080**. Probe ở cổng quản trị có thể pass trong khi cổng chính không nhận kết nối. [Spring Boot – Kubernetes Probes](https://docs.spring.io/spring-boot/reference/actuator/endpoints.html#actuator.endpoints.kubernetes-probes)
 - [ ] `readinessProbe` → `/readyz` (`periodSeconds: 5`, `failureThreshold: 2`, `timeoutSeconds: 2`). Readiness chỉ lên `ACCEPTING_TRAFFIC` khi startup xong, nên pod mới không nhận request quá sớm. [Spring Boot – Application lifecycle and probe states](https://docs.spring.io/spring-boot/reference/actuator/endpoints.html#actuator.endpoints.kubernetes-probes.lifecycle)
 - [ ] `livenessProbe` → `/livez` (`periodSeconds: 10`, `failureThreshold: 3`, `timeoutSeconds: 2`) và **không** đưa DB, Kafka hay API ngoài vào nhóm liveness. Một hệ thống ngoài hỏng sẽ làm Kubernetes khởi động lại mọi instance cùng lúc. [Spring Boot – Checking external state with Kubernetes probes](https://docs.spring.io/spring-boot/reference/actuator/endpoints.html#actuator.endpoints.kubernetes-probes.external-state)
 - [ ] Nhóm readiness mặc định cũng không chứa hệ thống dùng chung; chỉ thêm (qua `management.endpoint.health.group.readiness.include`) khi chấp nhận mọi pod rời khỏi Service khi hệ thống đó sập, và ghi lý do. [Spring Boot – Kubernetes Probes](https://docs.spring.io/spring-boot/reference/actuator/endpoints.html#actuator.endpoints.kubernetes-probes.external-state)
@@ -25,7 +25,7 @@
 - [ ] Ứng dụng là PID 1 (`ENTRYPOINT` dạng exec) để nhận SIGTERM. [Docker – Best practices: ENTRYPOINT](https://docs.docker.com/build/building/best-practices/#entrypoint), xem [`container-image.md`](container-image.md)
 
 ### preStop và gỡ endpoint
-- [ ] `lifecycle.preStop.sleep.seconds: 10` (handler `sleep` có sẵn, GA từ Kubernetes 1.34, không cần shell trong image). Khi xóa pod, việc gỡ endpoint khỏi EndpointSlice chạy **song song** với preStop/SIGTERM; kube-proxy, Calico và Ingress controller cần thời gian để cập nhật. Nếu không chờ, request vẫn được định tuyến tới pod đã đóng cổng. [Kubernetes – Pod termination](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-termination), [Spring Boot – Kubernetes container lifecycle](https://docs.spring.io/spring-boot/how-to/deployment/cloud.html#howto.deployment.cloud.kubernetes.container-lifecycle), [Kubernetes – Feature gates (PodLifecycleSleepAction)](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/)
+- [ ] `lifecycle.preStop.sleep.seconds: 10` (handler `sleep` có sẵn, GA từ Kubernetes 1.34, không cần shell trong image). Khi xóa pod, việc gỡ endpoint khỏi EndpointSlice chạy **song song** với preStop/SIGTERM; kube-proxy, Calico và Envoy của Gateway `edge` cần thời gian để cập nhật. Nếu không chờ, request vẫn được định tuyến tới pod đã đóng cổng. [Kubernetes – Pod termination](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-termination), [Spring Boot – Kubernetes container lifecycle](https://docs.spring.io/spring-boot/how-to/deployment/cloud.html#howto.deployment.cloud.kubernetes.container-lifecycle), [Kubernetes – Feature gates (PodLifecycleSleepAction)](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/)
 - [ ] Đo lại độ trễ gỡ endpoint trên cụm lab (mục Bằng chứng); nếu 10 s chưa đủ thì tăng, không đoán. Spring Boot chỉ đưa 10 s làm ví dụ và ghi giá trị đúng tùy hệ thống. [Spring Boot – Kubernetes container lifecycle](https://docs.spring.io/spring-boot/how-to/deployment/cloud.html#howto.deployment.cloud.kubernetes.container-lifecycle)
 - [ ] `terminationGracePeriodSeconds: 60` ≥ preStop (10) + tổng các phase shutdown có việc thật (web 20 + Kafka listener 20) + dự phòng. Thời gian chờ được đếm **từ trước** preStop; hết hạn thì SIGKILL. [Kubernetes – Container lifecycle hooks](https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#hook-handler-execution), [Spring Boot – Kubernetes container lifecycle](https://docs.spring.io/spring-boot/how-to/deployment/cloud.html#howto.deployment.cloud.kubernetes.container-lifecycle)
 - [ ] Kiểm hành vi với kết nối keep-alive: Service L4 (kube-proxy, MetalLB) cân bằng theo **kết nối**, nên kết nối cũ vẫn bám pod đang tắt. Spring Boot ghi rằng kết nối persistent có thể làm việc từ chối request mới diễn ra khác. Client nội bộ phải retry request idempotent khi kết nối bị đóng. [Spring Boot – Graceful shutdown](https://docs.spring.io/spring-boot/reference/web/graceful-shutdown.html)
@@ -57,13 +57,14 @@
 
 - **Lab chạy 1 replica mặc định** ([ADR-0004](../adr/0004-single-instance-by-default-on-homelab.md)). Cụm 24 GiB không đủ cho 2 replica mỗi service, chỉ còn dư khoảng 1 GiB ([ticket 04](../.scratch/architecture-g0-g1/issues/04-resource-budget.md#answer)). Rollout và drain ở lab vì vậy có gián đoạn. Checklist này (2 replica, PDB) chỉ áp dụng khi thí nghiệm N15 scale service lên 2, bằng một commit vào `gitops`. Control plane cũng nhận pod.
 - **`maxSurge: 1`** làm rollout chậm khi có nhiều replica. Với 2 replica, khác biệt không đáng kể.
+- **Envoy của Gateway `edge` chạy 1 replica** ([ADR-0013](../adr/0013-gateway-api-envoy-gateway-shared-edge.md)). Thí nghiệm N15 rollout service, không đụng Envoy; nâng Envoy Gateway hoặc đổi `EnvoyProxy` thì có thể rơi kết nối, đo riêng theo [`cluster-entry.md`](cluster-entry.md#bằng-chứng-cần-có).
 - **Đo tải ở quy mô nhỏ** (cùng máy bàn chạy cụm, k6 chạy từ Mac qua Tailscale). Đường mạng qua Tailscale thêm độ trễ, nên N15 chỉ chấm theo **số request lỗi**, không chấm theo latency trong thí nghiệm này. Giới hạn đã ghi ở rủi ro của Charter.
 
 ## Bằng chứng cần có
 
 Ghi vào `docs/experiments/YYYY-MM-zero-downtime-<service>.md`: phiên bản image cũ/mới, cấu hình, lệnh, kết quả k6, và timeline.
 
-**Kịch bản tải** (k6, `constant-arrival-rate` khoảng 50 req/s trong 5 phút, đi đúng đường production: Ingress hoặc Gateway trên IP MetalLB):
+**Kịch bản tải** (k6, `constant-arrival-rate` khoảng 50 req/s trong 5 phút, đi đúng đường production: `https://<host>.lab.internal` qua Gateway `edge` trên IP MetalLB `10.20.0.200`, ví dụ `https://app.lab.internal`; không gọi thẳng Service hay `port-forward`):
 
 ```js
 export const options = {
@@ -74,6 +75,8 @@ export const options = {
 ```
 
 k6 thoát với mã khác 0 khi threshold không đạt. [k6 – Thresholds](https://grafana.com/docs/k6/latest/using-k6/thresholds/)
+
+k6 phải **tin root CA của lab** trước khi chạy: trên Mac là Keychain hệ thống (runbook [homelab](../../platform/docs/homelab-hyperv.md)), trên runner CI là store của OS. Không đặt `insecureSkipTLSVerify`, vì như vậy không còn đi đúng đường production. k6 trên macOS có đọc root trong Keychain không: **chưa xác minh**; kiểm bằng một lần chạy ngắn trước thí nghiệm, phải không có lỗi `x509`. Mọi client mới gọi vào lab phải tin root CA ([ADR-0014](../adr/0014-lab-pki-and-dns.md), [`cluster-entry.md`](cluster-entry.md#phân-phối-trust)).
 
 | Tình huống (chạy trong lúc k6 đang chạy) | Lệnh | Tiêu chí đạt |
 |---|---|---|
@@ -86,7 +89,7 @@ k6 thoát với mã khác 0 khi threshold không đạt. [k6 – Thresholds](htt
 
 Số đo phụ, để chỉnh giá trị thay vì đoán:
 
-- **Độ trễ gỡ endpoint**: `kubectl get endpointslices -l kubernetes.io/service-name=<svc> -w -o wide` cùng lúc `kubectl delete pod <pod>`; ghi khoảng từ lúc xóa tới khi endpoint chuyển `ready=false`. preStop phải lớn hơn khoảng này cộng thời gian Ingress/kube-proxy cập nhật.
+- **Độ trễ gỡ endpoint**: `kubectl get endpointslices -l kubernetes.io/service-name=<svc> -w -o wide` cùng lúc `kubectl delete pod <pod>`; ghi khoảng từ lúc xóa tới khi endpoint chuyển `ready=false`. preStop phải lớn hơn khoảng này cộng thời gian Envoy/kube-proxy cập nhật.
 - **Thời gian shutdown thật**: khoảng cách giữa log bắt đầu và kết thúc graceful shutdown của Spring Boot; phải nhỏ hơn `terminationGracePeriodSeconds - preStop`. Không có pod nào kết thúc với exit code 137 (`kubectl get pod -o jsonpath='{..lastState.terminated.exitCode}'`).
 - **Thời gian khởi động**: từ lúc pod được tạo tới Ready; dùng để chỉnh `startupProbe`.
 - **Đối chứng âm**: chạy lại một lần với `preStop` bỏ đi và `maxUnavailable: 25%`; kỳ vọng thấy request lỗi. Không thấy lỗi thì tải chưa đủ để phát hiện vấn đề.
@@ -98,4 +101,5 @@ Số đo phụ, để chỉnh giá trị thay vì đoán:
 - [Spring for Apache Kafka 4.1.2 – Listener container properties](https://docs.spring.io/spring-kafka/reference/kafka/container-props.html)
 - [Apache Kafka – Consumer Rebalance Protocol](https://kafka.apache.org/41/operations/consumer-rebalance-protocol/), [Kafka 4.0.0 release announcement](https://kafka.apache.org/blog/2025/03/18/apache-kafka-4.0.0-release-announcement/)
 - [k6 – Thresholds](https://grafana.com/docs/k6/latest/using-k6/thresholds/), [k6 releases](https://github.com/grafana/k6/releases)
+- Cửa vào và CA của lab: [`cluster-entry.md`](cluster-entry.md), [ADR-0013](../adr/0013-gateway-api-envoy-gateway-shared-edge.md), [ADR-0014](../adr/0014-lab-pki-and-dns.md)
 - [Docker – Build best practices](https://docs.docker.com/build/building/best-practices/)

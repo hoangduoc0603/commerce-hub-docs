@@ -129,7 +129,7 @@ Quyết định: [ADR-0003](../adr/0003-shared-postgres-cluster.md), [ADR-0012](
 ## 8.9 Bảo mật dữ liệu và mạng
 
 - **Secret**: Sealed Secrets trong repo `gitops` ([gitops-argocd.md](../standards/gitops-argocd.md)). Kubeconfig, auth key Tailscale và `.env` không bao giờ vào repo (repo public, [ADR-0006](../adr/0006-public-repos-on-personal-account.md)).
-- **NetworkPolicy theo app**, sinh từ chart `app`: ingress theo danh sách cho phép ở mọi app. Egress mặc định mở, chỉ siết ở app khai báo `egress.to` (`seller-web`, `gateway`). Gateway chỉ nhận từ `seller-web`; Keycloak được gọi vào `seller-web` cho backchannel logout. Admin API của simulator chạy port riêng để chặn được bằng NetworkPolicy.
+- **NetworkPolicy theo app**, sinh từ chart `app`: ingress theo danh sách cho phép ở mọi app; app có `HTTPRoute` thì mở thêm nguồn từ pod Envoy của `edge` (8.13). Egress mặc định mở, chỉ siết ở app khai báo `egress.to` (`seller-web`, `gateway`). Gateway chỉ nhận từ `seller-web`; Keycloak được gọi vào `seller-web` cho backchannel logout. Admin API của simulator chạy port riêng để chặn được bằng NetworkPolicy.
 - **Thông tin người mua (N11)**: không có trong log, trace, thông báo lỗi; order che người nhận theo Role ở API. Workspace đi trong baggage, PII thì không ([observability.md](../standards/observability.md)).
 - **Token sàn được mã hóa khi lưu (N11)** ở `channel-connector`. Cách mã hóa (khóa, xoay khóa) **chưa chốt**, nằm trong fog của map cùng chi tiết polling của connector.
 
@@ -153,7 +153,7 @@ Quyết định: ticket [11](../.scratch/architecture-g0-g1/issues/11-service-te
 - **Template**: repo `services/hello`, cũng là service "hello" của G0. Chỉ giữ phần mỏng (skeleton package, `application.yaml`, Dockerfile, `settings.gradle`, workflow gọi reusable workflow). Thứ cần đồng bộ về sau đi qua artifact có version: convention plugin, `service-kit`, chart `app`, reusable workflow.
 - **Artifact**: `service-kit` và `contracts` (Maven và npm) publish lên GitHub Packages từ tag `vX.Y.Z`, SemVer. Không repo nào dùng SNAPSHOT của repo khác. Dependabot bump version. Sửa lib cùng service thì dùng composite build.
 - **CI**: GitHub Actions trên GitHub-hosted runner; mỗi repo gọi reusable workflow trong `platform`. Push image lên registry ở `gw` qua `tailscale/github-action`. Workflow cho PR từ fork không nhận secret.
-- **Chart `app`**: một chart cho mọi workload (service Spring, `marketplace-sim`, `seller-web`). Phần JVM dưới `jvm.enabled` (`MaxRAMPercentage`, lab ghi đè 60 cho pod 512 Mi, đo ở G0). Bật bằng values: port thứ hai, nhiều hostname, Job migrate `PreSync`, Sealed Secret, NetworkPolicy. Mặc định `replicaCount: 2`; values lab đặt 1 ([ADR-0004](../adr/0004-single-instance-by-default-on-homelab.md)).
+- **Chart `app`**: một chart cho mọi workload (service Spring, `marketplace-sim`, `seller-web`). Phần JVM dưới `jvm.enabled` (`MaxRAMPercentage`, lab ghi đè 60 cho pod 512 Mi, đo ở G0). Mount trust bundle của lab (8.13). Bật bằng values: port thứ hai, `HTTPRoute` nhiều hostname gắn vào `edge`, Job migrate `PreSync`, Sealed Secret, NetworkPolicy. Mặc định `replicaCount: 2`; values lab đặt 1 ([ADR-0004](../adr/0004-single-instance-by-default-on-homelab.md)).
 - **GitOps**: repo service chỉ tạo image; `gitops` quyết định chạy ở đâu và cấu hình gì. Argo CD kéo chart từ registry và values từ `gitops` (multiple sources). CI cập nhật image tag trong `gitops`.
 
 ## 8.12 Vòng phát triển và test
@@ -167,3 +167,13 @@ Quyết định: ticket [13](../.scratch/architecture-g0-g1/issues/13-dev-loop.m
 - **Test tích hợp**: Testcontainers chạy cả trên Mac lẫn CI bằng cùng `./gradlew check`; cấu hình nằm ở `service-kit` module `test-support`. Tag image ghim cùng major.minor với production.
 - **Test chart**: `ct install` chạy trên kind trong job CI, dựng rồi bỏ mỗi lần.
 - **Đã chốt về test**: test N11 ba tầng (8.2); luật ArchUnit (5.2); test chặn route trùng giữa hai dialect của simulator; bộ test tuân thủ của simulator dựng từ ví dụ trong tài liệu Shopee. Chiến lược test G1 còn lại (Pact, nơi chạy e2e, property-based test cho BR-29) nằm trong fog của map.
+
+## 8.13 Cửa vào cụm, PKI và trust
+
+Quyết định: [ADR-0013](../adr/0013-gateway-api-envoy-gateway-shared-edge.md), [ADR-0014](../adr/0014-lab-pki-and-dns.md), ticket [16](../.scratch/architecture-g0-g1/issues/16-cluster-entry.md#answer). Checklist: [cluster-entry.md](../standards/cluster-entry.md).
+
+- **Cửa vào**: Gateway API với Envoy Gateway, một Gateway `edge` dùng chung (namespace `edge`, listener HTTPS `*.lab.internal`, redirect HTTP sang HTTPS) do app `platform` sở hữu. App chỉ viết `HTTPRoute` qua chart `app`; namespace phải có nhãn do `platform` gắn mới gắn route được. Không dùng Ingress.
+- **TLS**: kết thúc ở `edge` bằng chứng chỉ wildcard từ `ClusterIssuer lab-ca` (intermediate của CA nội bộ; root giữ offline, có name constraints). Riêng Keycloak được re-encrypt bằng `BackendTLSPolicy`.
+- **Trust**: mọi client phải tin root CA của lab. JVM dùng truststore toàn cục do trust-manager sinh, Node dùng `NODE_EXTRA_CA_CERTS`; chart `app` lo mount và đặt biến, code không cấu hình TLS riêng. Mac tin root qua Keychain, runner CI qua store của OS.
+- **DNS và hostname**: `lab.internal` phân giải bằng dnsmasq trên `gw` (Mac qua split DNS của Tailscale, pod qua CoreDNS). Danh sách hostname ở [mục 3.2](03-context-and-scope.md#32-bối-cảnh-kỹ-thuật).
+- **Header chuyển tiếp**: Envoy nối thêm vào `X-Forwarded-For`; số hop tin cậy phải cấu hình và có test giả mạo header cho Keycloak ([keycloak.md](../standards/keycloak.md)).

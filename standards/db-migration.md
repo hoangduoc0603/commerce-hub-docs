@@ -2,7 +2,7 @@
 
 - Ngày tra: 2026-11-12
 - Phiên bản áp dụng: Spring Boot 4.1.2 với `spring-boot-starter-flyway`, Flyway 12.4.0 (`org.flywaydb:flyway-core` + `flyway-database-postgresql`, bản do Spring Boot quản lý; Flyway mới nhất là 12.11.0, không tự nâng), PostgreSQL JDBC 42.7.14, PostgreSQL 17 (17.11) và 18 (18.6) chạy bằng CloudNativePG, Testcontainers 2.0.5, Kubernetes 1.37, Argo CD 3.6.
-- Phạm vi: thư mục `src/main/resources/db/migration` của mọi service có DB, cấu hình `spring.flyway.*`, Job migration trong chart `spring-service` (template thuộc [`helm-chart.md`](helm-chart.md)), role PostgreSQL của từng service, test migration trong CI.
+- Phạm vi: thư mục `src/main/resources/db/migration` của mọi service có DB, cấu hình `spring.flyway.*`, Job migration trong chart `app` (template thuộc [`helm-chart.md`](helm-chart.md)), role PostgreSQL của từng service, test migration trong CI.
 
 ## Checklist
 
