@@ -26,3 +26,7 @@ Bối cảnh ở ticket [08 Giao tiếp giữa service ở G1](../.scratch/archi
 - Ở Giai đoạn 1, crash giữa commit và gửi làm mất event. Nếu mất event đơn mới từ order, kéo bù (F5.2b) **không** vá được. Order đã lưu với cùng `update_time` nên bị bỏ qua, Reservation thiếu mãi, và Oversell xảy ra mà không ai thấy. Chấp nhận được vì Giai đoạn 1 chưa đo N5 (bắt đầu ở Giai đoạn 2). Không được chạy Giai đoạn 1 như bản production.
 - Giai đoạn 2 chỉ được thay bản cài đặt của port publish. Nếu phải sửa code domain thì nghĩa là ranh giới port đã bị rò.
 - Contract Avro, Schema Registry và idempotent consumer (bảng inbox) có ngay từ Giai đoạn 1, sớm hơn C18.
+
+## Sửa đổi
+
+- 2026-11-13 ([ticket 11](../.scratch/architecture-g0-g1/issues/11-service-template.md)): ở Giai đoạn 1 **không có bảng inbox**. Cả sáu event G1 đều mang trạng thái đầy đủ kèm version ([ticket 09](../.scratch/architecture-g0-g1/issues/09-g1-contracts.md)), nên consumer idempotent bằng version guard (upsert `WHERE stored_version < :v`). Inbox quay lại khi có event không mang trạng thái (lệnh, thông báo, từ Giai đoạn 2).
