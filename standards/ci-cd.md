@@ -8,7 +8,7 @@
 
 ### Reusable workflow cho polyrepo
 - [ ] `platform/.github/workflows/` có workflow `on: workflow_call` theo loại repo: `java-service.yml`, `node-app.yml`, `contracts.yml`, `update-gitops.yml`; input có kiểu và mô tả. Repo service chỉ có workflow mỏng gọi chúng. [Reuse workflows](https://docs.github.com/en/actions/reference/workflows-and-actions/reusing-workflow-configurations)
-- [ ] Repo gọi tham chiếu `uses: <owner>/platform/.github/workflows/java-service.yml@<SHA đầy đủ>`, có comment tên release. Re-run dùng lại đúng SHA của lần chạy đầu; tag thì dời được. [Reuse workflows](https://docs.github.com/en/actions/reference/workflows-and-actions/reusing-workflow-configurations), [Secure use – pin](https://docs.github.com/en/actions/reference/security/secure-use)
+- [ ] Repo gọi tham chiếu `uses: <owner>/commerce-hub-platform/.github/workflows/java-service.yml@<SHA đầy đủ>` (tên repo có prefix `commerce-hub-`, [ADR-0006](../adr/0006-public-repos-on-personal-account.md)), có comment tên release. Re-run dùng lại đúng SHA của lần chạy đầu; tag thì dời được. [Reuse workflows](https://docs.github.com/en/actions/reference/workflows-and-actions/reusing-workflow-configurations), [Secure use – pin](https://docs.github.com/en/actions/reference/security/secure-use)
 - [ ] `platform` phát hành bằng release có tag SemVer và bật **immutable releases**: tag khóa vào commit, không xóa hay dùng lại tên được. [Immutable releases](https://docs.github.com/en/code-security/supply-chain-security/understanding-your-software-supply-chain/immutable-releases)
 - [x] Không cần Access policy: mọi repo public ([ADR-0006](../adr/0006-public-repos-on-personal-account.md)), mà workflow của repo public thì repo nào cũng gọi được. Nếu sau này `platform` chuyển private thì phải bật Access policy "Accessible from repositories owned by '<user>'". [Reuse workflows – access](https://docs.github.com/en/actions/reference/workflows-and-actions/reusing-workflow-configurations), [Share across private repositories](https://docs.github.com/en/actions/how-tos/reuse-automations/share-across-private-repositories)
 - [ ] Truyền secret tường minh (`secrets: { NAME: ... }`), không dùng `secrets: inherit`. Workflow chung chỉ nhận secret nó cần. `env` cấp workflow của bên gọi **không** truyền sang, dùng `inputs`. [Reuse workflows](https://docs.github.com/en/actions/reference/workflows-and-actions/reusing-workflow-configurations)
@@ -95,7 +95,7 @@ Mọi repo đều public và nằm dưới tài khoản cá nhân, theo [ADR-000
 | Test thật | Log `./gradlew check` có Testcontainers khởi động PostgreSQL/Kafka | Không có test bị skip vì thiếu Docker |
 | Image | Digest trong output job; `curl -s http://10.20.0.5:5000/v2/<svc>/tags/list` có SHA | Tag = SHA, digest khớp `gitops` |
 | Lỗ hổng, SBOM | Theo bảng ở [`container-image.md`](container-image.md) | Như ở đó |
-| Provenance | `gh attestation verify oci://10.20.0.5:5000/<svc>@<digest> -R <owner>/<svc>` | Verify thành công (hoặc ghi lý do bỏ) |
+| Provenance | `gh attestation verify oci://10.20.0.5:5000/<svc>@<digest> -R <owner>/commerce-hub-<svc>` | Verify thành công (hoặc ghi lý do bỏ) |
 | Lead time | Thời điểm merge → image trong registry → commit `gitops` → Argo CD `Healthy` | Ghi từng khoảng (phút) |
 | Không đua ghi gitops | Merge 3 service cùng lúc | 3 commit tuần tự, không job lỗi |
 | Fork không chạm secret | PR thử từ fork | Không job nào nhận secret hoặc chạy trên runner lab |

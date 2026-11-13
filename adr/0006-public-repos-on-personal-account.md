@@ -23,4 +23,8 @@ Mọi repo của commerce-hub (`docs`, `contracts`, `platform`, `gitops`, các r
 - CI chạy *sau* khi code đã vào nhánh mặc định, nên lỗi chỉ được phát hiện chứ không bị chặn trước. Check Branch-Protection và Code-Review của OpenSSF Scorecard sẽ cho điểm thấp.
 - Push image đi qua tailnet. Nếu Tailscale phải đi relay DERP thì bước push có thể chậm, cần đo ở G0.
 - Khi có người thứ hai, hoặc khi chuyển một repo sang private, phải xem lại ADR này: bật lại checklist nhánh đầy đủ, CODEOWNERS, và Access policy cho `platform`.
-- Chưa xác minh, sẽ bật thử ở G0: tài khoản cá nhân bật được ruleset cho repo public hay phải dùng branch protection rule; policy bắt ghim SHA có ở cấp tài khoản hay chỉ ở từng repo.
+- Chưa xác minh, sẽ bật thử ở G0: tài khoản cá nhân bật được ruleset cho repo public hay phải dùng branch protection rule; policy bắt ghim SHA có ở cấp tài khoản hay chỉ ở từng repo. Đã thử ở ticket G0-01 (2026-11-13): ruleset bật được; policy ghim SHA chỉ có ở từng repo. Kết quả ghi ở [`ci-cd.md`](../standards/ci-cd.md).
+
+## Đặt tên repo (bổ sung 2026-11-13)
+
+Mọi repo trên GitHub có prefix `commerce-hub-` (`commerce-hub-docs`, `commerce-hub-platform`, `commerce-hub-hello`…), để không lẫn với dự án khác trên cùng tài khoản cá nhân. Thư mục local giữ tên ngắn (`platform/`, `services/hello/`); `repo-bootstrap.sh` tự thêm prefix. Phương án tạo organization Free riêng được cân nhắc lại và vẫn bị loại. Org cho không gian tên riêng, policy Actions cấp owner (không phải bật từng repo) và cài GitHub App một lần. Nhưng script đã bật policy cho từng repo, nên những lợi ích này không đáng thêm một tài khoản phải quản lý. Đổi lại, tên tham chiếu dài hơn, ví dụ `uses: <owner>/commerce-hub-platform/.github/workflows/…`.
