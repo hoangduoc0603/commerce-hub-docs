@@ -14,6 +14,14 @@ Lý do: dự án làm một mình, các repo chưa có remote. Hệ thống là 
 - Ghi mã yêu cầu (F…, BR-…, N…, SIM-…) trong tiêu đề hoặc thân ticket để truy vết.
 - Bình luận và lịch sử trao đổi nối vào cuối file, dưới heading `## Comments`.
 
+## Ticket triển khai (khi `/to-tickets` tạo ticket)
+
+Chủ repo tự làm từng ticket qua `/huong-dan` để học (xem [`huong-dan.md`](huong-dan.md)), nên ticket viết cho người làm:
+
+- `Status: ready-for-human`, thay cho `ready-for-agent`.
+- Thêm mục `## Mục tiêu học` ngay sau phần mô tả: 1–3 kỹ thuật chủ repo sẽ học qua ticket, mỗi kỹ thuật một dòng, trỏ tới cột "Kỹ thuật trọng tâm" của [ma trận truy vết](../requirements/traceability.md) hoặc câu chuyện phỏng vấn ở [C19](../requirements-and-techniques.md#c19-chủ-đề-phỏng-vấn-gắn-với-dự-án).
+- Mỗi ticket đưa vào nhiều nhất **một khái niệm mới**. Ticket vẫn là một lát cắt dọc chạy và kiểm được; lát cắt cần hai khái niệm mới thì tách thành hai ticket.
+
 ## Khi một skill nói "publish to the issue tracker"
 
 Tạo file mới dưới `docs/.scratch/<feature-slug>/`, tạo thư mục nếu chưa có.
