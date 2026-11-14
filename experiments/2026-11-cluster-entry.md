@@ -8,13 +8,17 @@ Bằng chứng theo bảng "Bằng chứng cần có" của [cluster-entry.md](.
 |---|---|---|---|
 | DNS từ Mac | 2026-11-14, G0-02 | `dscacheutil -q host -a name x.lab.internal` → `10.20.0.200`; `a.b.lab.internal` → `10.20.0.200`; `github.com` vẫn ra IP công khai | ✅ |
 | DNS từ pod | 2026-11-14, G0-02 | `busybox:stable` ép chạy trên từng node `k8s-cp`, `k8s-w1`, `k8s-w2`: `nslookup auth.lab.internal` → `10.20.0.200`. `kubernetes.default.svc.cluster.local` → `10.96.0.1`, `github.com` → IP công khai | ✅ (chạy lại sau mỗi `kubeadm upgrade`) |
-| Name constraints | 2026-11-14, G0-02 (một phần) | Chỉ OpenSSL 4.1.0: `platform/scripts/lab-ca/test-constraints.sh` 18/18 PASS (10 ca name constraints, 8 ca root và hành vi script) (chi tiết bên dưới). Chrome, Safari, `curl` ở G0-06; JVM, Node ở G0-07 | ⏳ |
+| Name constraints | 2026-11-14, G0-02 (một phần); 2026-11-15, G0-06 | OpenSSL 4.1.0: `test-constraints.sh` 36/36 PASS (gồm intermediate thật: ràng buộc riêng chặn `evil.example.com`, IP SAN). Chứng chỉ `evil.example.com`, `localhost` cấp thật từ `lab-ca` (cert-manager không chặn): Chrome 157 `NET::ERR_CERT_INVALID`; SecTrust "violates name constraints"; curl 8.7.1 macOS lỗi 60; OpenSSL `permitted subtree violation`; Safari từ chối. Không client nào chấp nhận. JVM, Node ở G0-07 ([G0, mục 5](2026-11-g0.md#5-pki-của-lab-và-https-trên-edge-cấp-chứng-chỉ-chuỗi-tin-cậy-name-constraints-cụm-trắng)) | ✅ (trình duyệt, curl) |
 | Đúng phiên bản | 2026-11-14, G0-05 | CRD `gateways…` có `bundle-version: v1.6.1`, `channel: standard`; Deployment `envoy-gateway` có nhãn `helm.sh/chart: gateway-helm-v1.10.0` (Argo CD render bằng `helm template`, không có release Helm nên `helm list` rỗng; dùng nhãn này thay lệnh trong bảng chuẩn) | ✅ |
 | Gateway sẵn sàng | 2026-11-14, G0-05 | Gateway `edge` `Accepted=True`, `Programmed=True`; route thử `Accepted`, `ResolvedRefs` | ✅ |
 | IP cố định | 2026-11-14, G0-05 | Service Envoy `LoadBalancer`, `EXTERNAL-IP` `10.20.0.200` | ✅ |
 | Chặn namespace lạ | 2026-11-14, G0-05 | Route khai trùng `whoami.lab.internal` ở namespace không nhãn: `Accepted=False` `NotAllowedByListeners`, traffic vẫn tới app thật. Giữa namespace có nhãn chưa có ranh giới hostname (G0-22) | ✅ (một phần) |
 | RAM | 2026-11-14, G0-05 (lúc rảnh) | Controller 56/256 Mi, Envoy 21/128 Mi, shutdown-manager 23/32 Mi. Đo 24 giờ có tải ở G0-34 | ⏳ |
-| HTTP → HTTPS, Hairpin, TLS trên Mac, Trust ở JVM/Node, Re-encrypt Keycloak, Đường dẫn Keycloak bị chặn, Giả `X-Forwarded-For`, Zero-downtime khi đổi Envoy | | | |
+| HTTP → HTTPS | 2026-11-15, G0-06 | `curl -q -sI http://app.lab.internal/realms/x?y=1` → `301`, `location: https://app.lab.internal/realms/x?y=1` | ✅ |
+| TLS trên Mac | 2026-11-15, G0-06 | `https://argocd.lab.internal`: chuỗi leaf `*.lab.internal` (ECDSA P-256) ← intermediate `commerce-hub lab intermediate CA 2026-11` ← root (Keychain); `curl -q -v` verify ok; SecTrust thành công; Chrome 157 và Safari không cảnh báo | ✅ |
+| Safari | 2026-11-15, G0-06 | Chủ repo mở tay: `https://argocd.lab.internal` không cảnh báo; `https://localhost:7443` (chứng chỉ `localhost` từ `lab-ca`, ngoài constraints) bị từ chối | ✅ |
+| Thứ tự cửa vào | 2026-11-15, G0-06 | Cụm trắng trên kind: CRD Gateway API → cert-manager (0 restart, gateway-shim chạy) → `lab-ca` `Ready` → Certificate `edge` `Ready` ở giây 360, không thao tác tay. `gateway-api-crds` mất 218 s mới `Healthy` (reconcile định kỳ) | ✅ |
+| Hairpin, Trust ở JVM/Node, Re-encrypt Keycloak, Đường dẫn Keycloak bị chặn, Giả `X-Forwarded-For`, Zero-downtime khi đổi Envoy | | | |
 | Mailpit | | | |
 
 ## Chi tiết
