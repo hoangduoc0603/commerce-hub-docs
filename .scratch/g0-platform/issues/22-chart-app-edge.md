@@ -20,3 +20,8 @@ Thêm vào chart `app` ba khả năng bật bằng values: `httpRoute.*` gắn v
 - [ ] Release thử JVM gọi `https://argocd.lab.internal` OK; tắt truststore trong values thì lỗi `PKIX`.
 - [ ] `ct install` vẫn pass (biến thể route chạy trên kind có CRD Gateway API, hoặc chỉ render nếu không có controller; ghi lựa chọn).
 - [ ] Release chart mới publish lên registry.
+
+## Chuyển từ G0-05
+
+- [ ] Ràng buộc hostname theo namespace: hiện mọi namespace có nhãn `edge.lab.internal/routes` khai được bất kỳ `*.lab.internal` nào, kể cả hostname của app khác (path cụ thể hơn thắng). Chọn cơ chế (ví dụ `ValidatingAdmissionPolicy` so `spec.hostnames` của HTTPRoute với danh sách cho phép gắn trên namespace) và thử bằng một route khai `auth.lab.internal` từ namespace service. Review G0-05 điểm 1.
+- [ ] Schema của chart kiểm `httpRoute.parentRef` (chỉ `edge/edge`, `sectionName` hợp lệ): `parentRef` sai tên làm app chỉ `Progressing` mãi, không `Degraded`. Review G0-05 điểm 7.

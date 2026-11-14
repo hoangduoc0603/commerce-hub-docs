@@ -9,7 +9,12 @@ Bằng chứng theo bảng "Bằng chứng cần có" của [cluster-entry.md](.
 | DNS từ Mac | 2026-11-14, G0-02 | `dscacheutil -q host -a name x.lab.internal` → `10.20.0.200`; `a.b.lab.internal` → `10.20.0.200`; `github.com` vẫn ra IP công khai | ✅ |
 | DNS từ pod | 2026-11-14, G0-02 | `busybox:stable` ép chạy trên từng node `k8s-cp`, `k8s-w1`, `k8s-w2`: `nslookup auth.lab.internal` → `10.20.0.200`. `kubernetes.default.svc.cluster.local` → `10.96.0.1`, `github.com` → IP công khai | ✅ (chạy lại sau mỗi `kubeadm upgrade`) |
 | Name constraints | 2026-11-14, G0-02 (một phần) | Chỉ OpenSSL 4.1.0: `platform/scripts/lab-ca/test-constraints.sh` 18/18 PASS (10 ca name constraints, 8 ca root và hành vi script) (chi tiết bên dưới). Chrome, Safari, `curl` ở G0-06; JVM, Node ở G0-07 | ⏳ |
-| Đúng phiên bản, Gateway sẵn sàng, IP cố định, HTTP → HTTPS, Hairpin, TLS trên Mac, Trust ở JVM/Node, Re-encrypt Keycloak, Đường dẫn Keycloak bị chặn, Giả `X-Forwarded-For`, Zero-downtime khi đổi Envoy, Chặn namespace lạ, RAM | | | |
+| Đúng phiên bản | 2026-11-14, G0-05 | CRD `gateways…` có `bundle-version: v1.6.1`, `channel: standard`; Deployment `envoy-gateway` có nhãn `helm.sh/chart: gateway-helm-v1.10.0` (Argo CD render bằng `helm template`, không có release Helm nên `helm list` rỗng; dùng nhãn này thay lệnh trong bảng chuẩn) | ✅ |
+| Gateway sẵn sàng | 2026-11-14, G0-05 | Gateway `edge` `Accepted=True`, `Programmed=True`; route thử `Accepted`, `ResolvedRefs` | ✅ |
+| IP cố định | 2026-11-14, G0-05 | Service Envoy `LoadBalancer`, `EXTERNAL-IP` `10.20.0.200` | ✅ |
+| Chặn namespace lạ | 2026-11-14, G0-05 | Route khai trùng `whoami.lab.internal` ở namespace không nhãn: `Accepted=False` `NotAllowedByListeners`, traffic vẫn tới app thật. Giữa namespace có nhãn chưa có ranh giới hostname (G0-22) | ✅ (một phần) |
+| RAM | 2026-11-14, G0-05 (lúc rảnh) | Controller 56/256 Mi, Envoy 21/128 Mi, shutdown-manager 23/32 Mi. Đo 24 giờ có tải ở G0-34 | ⏳ |
+| HTTP → HTTPS, Hairpin, TLS trên Mac, Trust ở JVM/Node, Re-encrypt Keycloak, Đường dẫn Keycloak bị chặn, Giả `X-Forwarded-For`, Zero-downtime khi đổi Envoy | | | |
 | Mailpit | | | |
 
 ## Chi tiết

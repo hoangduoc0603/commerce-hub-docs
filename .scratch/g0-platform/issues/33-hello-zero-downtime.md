@@ -21,3 +21,8 @@ Chứng minh cấu hình zero-downtime của chart `app` bằng số đo. `hello
 - [ ] Số đo phụ: độ trễ gỡ endpoint, thời gian shutdown thật, thời gian tới Ready; không pod nào exit 137. Chỉnh preStop và `startupProbe` theo số đo.
 - [ ] Kịch bản k6 nằm trong repo `load-tests`; bản ghi `docs/experiments/` theo tên của chuẩn.
 - [ ] `hello` trở lại 1 replica bằng một commit revert.
+
+## Chuyển từ G0-05
+
+- Envoy chạy 1 replica, 128 Mi, không có overload manager hay giới hạn kết nối: theo dõi OOMKilled của container `envoy` trong lúc chạy k6 (review G0-05 điểm 9). Nếu có, cấu hình giới hạn ở `ClientTrafficPolicy`/`EnvoyProxy` thay vì nâng limit.
+- Đổi `EnvoyProxy` (ví dụ G0-05 thêm `GOMEMLIMIT` cho shutdown-manager) làm rollout pod Envoy; số request lỗi lúc đó chưa đo.

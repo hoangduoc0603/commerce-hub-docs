@@ -22,3 +22,7 @@ Spec: [G0](../spec.md)
 - [ ] arc42 mục 7 (deployment view) và mục 9 cập nhật; runbook bootstrap, khóa sealing, thêm service, admin realm đầy đủ.
 - [ ] Bản ghi thí nghiệm G0 trong `docs/experiments/` link tới các bản ghi theo chủ đề.
 - [ ] Dòng "Phase hiện tại" trong CLAUDE.md và ma trận truy vết phản ánh G0 xong.
+
+## Chuyển từ G0-05
+
+- RAM lúc rảnh (2026-11-14): controller Envoy Gateway 56/256 Mi, Envoy 21/128 Mi, **shutdown-manager 23/32 Mi** (đã thêm `GOMEMLIMIT` 28MiB). Đo lại sau 24 giờ; nếu shutdown-manager OOMKilled thì nâng limit và sửa bảng ADR-0004.
