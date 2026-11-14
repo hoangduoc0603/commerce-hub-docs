@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Pod
+metadata: {name: nc-server, namespace: sandbox-trust, labels: {app: nc-server}}
+spec:
+  securityContext: {runAsNonRoot: true, runAsUser: 1000, seccompProfile: {type: RuntimeDefault}}
+  containers:
+    - name: server
+      image: node:26-alpine@sha256:6bd9ab43c0ec0190ca7b2d193906cb8b7edf6e7f4afa43ddeccd6452710bffb5
+      command: [node, /app/serve.mjs]
+      ports: [{containerPort: 8443}]
+      securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+      resources: {requests: {cpu: 20m, memory: 64Mi}, limits: {memory: 64Mi}}
+      volumeMounts:
+        - {name: app, mountPath: /app, readOnly: true}
+        - {name: evil, mountPath: /certs/evil, readOnly: true}
+        - {name: control, mountPath: /certs/nc-control, readOnly: true}
+  volumes:
+    - {name: app, configMap: {name: nc-server}}
+    - {name: evil, secret: {secretName: evil-tls}}
+    - {name: control, secret: {secretName: nc-control-tls}}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: nc-server, namespace: sandbox-trust}
+spec:
+  selector: {app: nc-server}
+  ports: [{port: 443, targetPort: 8443}]

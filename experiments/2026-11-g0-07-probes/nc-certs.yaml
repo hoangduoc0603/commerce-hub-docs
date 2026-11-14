@@ -1,0 +1,20 @@
+# G0-07 bước 6: chứng chỉ ngoài name constraints (evil.example.com) và đối chứng trong constraints, cùng do lab-ca cấp.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata: {name: evil, namespace: sandbox-trust}
+spec:
+  secretName: evil-tls
+  dnsNames: [evil.example.com]
+  duration: 24h
+  privateKey: {algorithm: ECDSA, size: 256}
+  issuerRef: {kind: ClusterIssuer, name: lab-ca}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata: {name: nc-control, namespace: sandbox-trust}
+spec:
+  secretName: nc-control-tls
+  dnsNames: [nc-control.lab.internal]
+  duration: 24h
+  privateKey: {algorithm: ECDSA, size: 256}
+  issuerRef: {kind: ClusterIssuer, name: lab-ca}
