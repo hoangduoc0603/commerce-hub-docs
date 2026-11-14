@@ -18,7 +18,7 @@ Secret đi vào cụm chỉ dưới dạng `SealedSecret` (scope `strict`), do A
 
 - [x] Một `SealedSecret` thử commit vào `gitops`, sync thành `Secret` trong đúng namespace; đổi namespace thì không giải mã được.
 - [x] `git -C gitops grep -l '^kind: Secret$'` trả 0 file. **Đạt theo ý định, đổi phép kiểm:** lệnh nguyên văn trả 1 file (`bootstrap/argocd/upstream/install.yaml`, khung `argocd-secret` rỗng không có `data`, do argocd-server tự điền lúc chạy). Thay bằng `gitops/scripts/check-no-plain-secrets.sh` (đọc YAML, bắt Secret có `data`/`stringData` và `secretGenerator`): exit 0 trên 13 file YAML.
-- [x] Runbook sao lưu và khôi phục khóa sealing, cất bản sao ngoài Git. Runbook [`runbooks/sealing-key.md`](../../../runbooks/sealing-key.md); bản sao lưu ở `~/.commerce-hub/sealing-keys/` (700/600), **chủ repo chuyển vào password manager**.
+- [x] Runbook sao lưu và khôi phục khóa sealing, cất bản sao ngoài Git. Runbook [`runbooks/sealing-key.md`](../../../runbooks/sealing-key.md); bản sao lưu ở `~/.commerce-hub/sealing-keys/` (700/600, loại khỏi Time Machine), chỉ giữ một bản `…T160502Z.yaml` (sha256 `dbd6d32f…`, đã bỏ annotation `last-applied-configuration`). **Lệch chuẩn có chủ đích** (chủ repo quyết định 2026-11-14): dạng rõ, chưa có bản ngoài máy; ghi ở [gitops-argocd.md, "Lệch chuẩn có chủ đích ở home lab"](../../../standards/gitops-argocd.md#lệch-chuẩn-có-chủ-đích-ở-home-lab). Đường lên đúng chuẩn (ảnh đĩa mã hóa + Passwords + iCloud) đã thử với dữ liệu giả, ghi trong runbook.
 - [x] Thử khôi phục: xóa controller và khóa, nạp lại bản sao, `SealedSecret` cũ vẫn giải mã được (1,7 s).
 - [x] Quy ước `secretRevision` ghi trong runbook (chart dùng ở ticket 21).
 

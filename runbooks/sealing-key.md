@@ -64,11 +64,35 @@ Script làm các việc sau:
 
 **Cất bản sao lưu:**
 
+> **Trạng thái hiện tại (lệch chuẩn có chủ đích, 2026-11-14):** bản sao lưu nằm ở dạng rõ, chỉ một bản, trong `~/.commerce-hub/sealing-keys/` trên Mac của chủ repo (thư mục `700`, file `600`, loại khỏi Time Machine, FileVault bật); chưa có bản ngoài máy. Lý do và rủi ro chấp nhận: [gitops-argocd.md, "Lệch chuẩn có chủ đích ở home lab"](../standards/gitops-argocd.md#lệch-chuẩn-có-chủ-đích-ở-home-lab). Sau mỗi lần sao lưu lại, xóa bản cũ, chỉ giữ bản mới nhất. Cách đúng chuẩn ở dưới.
+
+Có hai cách đúng chuẩn, tùy password manager:
+
+- **Password manager đính kèm được file** (1Password: item **Document**; Bitwarden: Secure Note có file đính kèm, cần gói Premium): làm theo các bước 1–3 ngay dưới.
+- **Không đính kèm được file** (app Passwords của macOS): cất file trong ảnh đĩa mã hóa, mật khẩu trong Passwords, xem mục "Ảnh đĩa mã hóa" bên dưới.
+
 1. Tạo một mục trong password manager tên `commerce-hub / sealing-key / <context> / <UTC stamp>`.
    - Đính kèm file `sealing-key-backup-<context>-<stamp>.yaml`.
    - Ghi vào phần ghi chú: số khóa, fingerprint SHA-256 của từng cert, và sha256 của file (script in sẵn cả ba).
 2. Mở lại mục vừa tạo, kiểm sha256 của file đính kèm.
 3. Xóa bản trên đĩa: `rm ~/.commerce-hub/sealing-keys/sealing-key-backup-*.yaml`.
+
+**Ảnh đĩa mã hóa** (đã thử với dữ liệu giả ở G0-04; ảnh nén chỉ đọc khoảng 140 KB, nhập sai mật khẩu bị từ chối). Mọi lệnh có nhập mật khẩu chạy trong app Terminal riêng, không qua công cụ nào ghi lại output (transcript của trợ lý AI, log CI).
+
+1. Sinh mật khẩu thẳng vào clipboard, không hiện ra màn hình: `openssl rand -base64 24 | pbcopy`. Dán vào một mục mới trong Passwords (Title `commerce-hub sealing-key DMG`, Notes: tên file, số khóa, fingerprint, sha256, nơi đặt ảnh đĩa). Xóa clipboard: `printf '' | pbcopy`. iCloud Keychain phải bật để mật khẩu cũng có bản ngoài Mac.
+2. Gom đúng file cần cất vào một thư mục riêng rồi tạo ảnh đĩa (lệnh hỏi mật khẩu hai lần):
+
+   ```bash
+   mkdir -m 700 ~/.commerce-hub/stage
+   cp ~/.commerce-hub/sealing-keys/sealing-key-backup-<context>-<stamp>.yaml ~/.commerce-hub/stage/
+   hdiutil create -srcfolder ~/.commerce-hub/stage -volname commerce-hub-sealing-key \
+     -encryption AES-256 -format UDZO ~/.commerce-hub/commerce-hub-sealing-key-<context>-<stamp>.dmg
+   ```
+
+3. Chép ảnh đĩa ra ngoài Mac (iCloud Drive và/hoặc USB). Mở **bản ngoài Mac** bằng Finder (bỏ tick "Remember password in my keychain"), so `shasum -a 256` của file bên trong với sha256 script đã in, rồi `diskutil eject /Volumes/commerce-hub-sealing-key`.
+4. Xóa bản không mã hóa và bản tạm: file `.yaml`, thư mục `stage`, file `.dmg` trên Mac.
+
+Đánh đổi: nếu cả ảnh đĩa (iCloud Drive) lẫn mật khẩu (iCloud Keychain) cùng ở một Apple Account, chiếm được tài khoản đó là có cả hai; Apple Account phải bật xác thực hai lớp, hoặc giữ thêm bản trên USB cất riêng.
 
 Vì gia hạn chỉ **thêm** khóa, bản sao lưu mới nhất chứa mọi khóa còn dùng. Giữ bản mới nhất và một bản liền trước.
 
@@ -76,7 +100,7 @@ Vì gia hạn chỉ **thêm** khóa, bản sao lưu mới nhất chứa mọi kh
 
 ## Khôi phục
 
-Lấy file sao lưu từ password manager ra một chỗ ngoài repo, ví dụ `~/.commerce-hub/sealing-keys/`, với quyền `600`.
+Lấy file sao lưu ra một chỗ ngoài repo, với quyền `600`. Hiện tại (lệch chuẩn ở trên) file đã nằm sẵn ở `~/.commerce-hub/sealing-keys/`; nếu đã cất theo cách đúng chuẩn thì lấy từ password manager hoặc mở ảnh đĩa mã hóa.
 
 ### A. Dựng lại cụm từ trắng (đúng thứ tự)
 
