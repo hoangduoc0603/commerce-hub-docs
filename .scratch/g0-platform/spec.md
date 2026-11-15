@@ -1,10 +1,10 @@
 # Spec: Giai đoạn 0, nền tảng và service "hello" có trace
 
 Status: ready-for-agent
-Ngày: 2026-11-13
+Ngày: 2026-11-13, sửa phạm vi 2026-11-15 (xem mục [Sửa phạm vi 2026-11-15](#sửa-phạm-vi-2026-11-15))
 Nguồn: [Map kiến trúc G0–G1](../architecture-g0-g1/map.md) (ticket 01–19 đã chốt), [C18](../../requirements-and-techniques.md#c18-lộ-trình-gợi-ý), [`docs/standards/`](../../standards/), ADR-0001..0016
 Repos: docs, platform, gitops, contracts, libs/service-kit, services/hello, e2e
-Yêu cầu: N12 (khung), N11 (hook RLS trong lib), N10 (backup, chưa diễn tập khôi phục)
+Yêu cầu: N12 (khung), N11 (hook RLS trong lib). N10 (backup) hoãn tới G7 từ 2026-11-15
 
 ## Problem Statement
 
@@ -160,6 +160,20 @@ Dựng nền tảng production-grade tối thiểu trên cụm home lab, rồi c
 
 ## Implementation Decisions
 
+### Sửa phạm vi 2026-11-15
+
+Chủ repo chốt lại trọng tâm học ([Charter](../../project-charter.md) mục 1, bản 1.1): backend, microservices, event-driven với Java/Spring. Hạ tầng là phương tiện, chỉ làm tới mức service chạy và quan sát được. Không bỏ phần nào: phần hạ tầng sâu xếp vào Giai đoạn 7. Mục này thắng mọi dòng mâu thuẫn bên dưới và trong phần User Stories.
+
+- **Quan sát giữ đủ** như thiết kế: Prometheus, Grafana, Loki, Tempo, Collector, dashboard dạng code (ticket 13, 14, 30). Grafana dùng tài khoản admin cục bộ (mật khẩu là SealedSecret); SSO Grafana sang G7. Ticket 13 không còn phụ thuộc ticket 11.
+- **Chuẩn production hai mức** ([CLAUDE.md](../../../CLAUDE.md), mục "Chuẩn production"): code service, cấu hình Kafka, migration, contract giữ đủ quy trình (file chuẩn, checklist, số đo). Hạ tầng cài theo mặc định của chart hoặc operator, ghim phiên bản, ghi chỗ lệch; chỉ đo khi nó ảnh hưởng tới một case backend.
+- **Image và chart trên GHCR** ([ADR-0017](../../adr/0017-images-and-charts-on-ghcr.md)), thay registry HTTP `10.20.0.5:5000` trên `gw`. CI push bằng `GITHUB_TOKEN`, không vào tailnet. Registry trên `gw` tắt.
+- **Keycloak bản mỏng** (ticket 10): Operator, 1 instance, DB `keycloak`, `auth.lab.internal` qua `edge`, realm dạng code (11). Image build riêng (theme, `passwordBlacklist`) sang G1, cùng luồng đăng ký nhà bán. Hostname `kc-admin.` (vào admin bằng `port-forward`) và re-encrypt bằng `BackendTLSPolicy` (`edge` nói HTTP với Keycloak) sang G7.
+- **Chart `app` bản mỏng** (21, 22): giữ Deployment, Service, probe, resources, securityContext, `jvm.*` và truststore, `httpRoute`, Job `PreSync`, SealedSecret, `secretRevision`, `helm lint` và `kubeconform`. Sang G7: `ct install` trên kind, JSON schema, NetworkPolicy, PDB, `topologySpreadConstraints`.
+- **Image** (23): giữ build một lần, tag SHA, digest, Trivy. Sang G7: SBOM, `actions/attest`, `gh attestation verify`.
+- **Xếp sang G7 toàn bộ:** ticket 09 (backup `pg-main`), 12 (SSO và RBAC cho Argo CD), 31 (smoke e2e), 33 (rollout không lỗi dưới tải), bản 24 giờ của 34. Mỗi ticket có dòng `Hoãn tới: G7`.
+- **User Stories xếp sang G7:** 10, 18, 50, 52, 53, 77–80, 82; phần `kc-admin.` của 16; phần "image build sẵn" của 27 (sang G1); phần PDB của 40; 41, 43, 45; phần SBOM và attestation của 49; phần "sau 24 giờ" và RustFS của 83. Story 81 và 84 chỉ áp cho artifact thuộc mức đầy đủ.
+- **Thứ tự sau ticket 08:** 18 (`service-kit`) trước, rồi xen kẽ 10, 25, 13, 15. Ba chuỗi chạy song song: Keycloak 10 → 11 → 29; deploy 17 → 21 → 22 → 24 → 27; code 18 → 25 → 26 → 28.
+
 Phần lớn quyết định dưới đây đã chốt ở ticket 01–19 của map và ADR. Spec chỉ gom lại theo module và thêm những quyết định mới cần cho G0, đánh dấu **(mới)**. Phiên bản lấy theo dòng "Phiên bản áp dụng" của từng file `docs/standards/`.
 
 ### Phạm vi G0 so với G1
@@ -302,7 +316,14 @@ Phần lớn quyết định dưới đây đã chốt ở ticket 01–19 của 
 
 ### Cổng ra khỏi G0
 
-- **(mới)** G0 chỉ xong khi `kubectl top` toàn cụm sau 24 giờ (hạ tầng G0 cộng `hello`) đã so với bảng của ADR-0004, kèm phần dự kiến cho G1. Nếu thiếu quá 1 GiB so với ngân sách G1 thì sửa ADR-0004 trước khi bắt đầu spec G1, đúng như ticket 04 đã yêu cầu.
+- **(sửa 2026-11-15)** G0 xong khi:
+  - `hello` deploy qua GitOps từ CI, image lấy từ GHCR;
+  - `hello` bắt buộc JWT do realm `commerce-hub` phát;
+  - mỗi request có trace trên Tempo (span HTTP và span DB), log trên Loki, metric và dashboard "Service overview";
+  - Kafka 3 broker và Apicurio chạy, pipeline Avro chặn được thay đổi phá vỡ;
+  - vòng dev bằng `platform/compose` trên Mac chạy được;
+  - đo **một lần** `kubectl top` toàn cụm và RSS của `hello`, so với bảng ADR-0004 kèm phần dự kiến cho G1. Thiếu quá 1 GiB thì sửa ADR-0004 trước khi bắt đầu spec G1. Bản đo sau 24 giờ sang G7.
+  - Bản cũ (đo sau 24 giờ, chờ 09, 31, 33) bị thay bởi danh sách này.
 
 ## Testing Decisions
 
@@ -354,7 +375,8 @@ Chưa có code trong polyrepo, nên không có test cũ để noi theo. Mẫu g�
 - Mọi service nghiệp vụ G1 (`gateway`, `workspace`, `channel-connector`, `catalog`, `inventory`, `order`), `marketplace-sim`, `seller-web`, cùng client Keycloak, theme, hostname `app.` và `shopee-sim.` của chúng.
 - Schema Avro nghiệp vụ, topic nghiệp vụ, `KafkaUser` từng service, module `events`, DLT và alert DLT, giao thức consumer KIP-848.
 - Bản sao Member, filter HTTP kiểm `X-Workspace-Id`, interceptor Kafka của `workspace-access`; cursor, `Idempotency-Key`, `ETag`/`If-Match`.
-- Diễn tập khôi phục PITR và đo RTO (N10), failover với 2 instance PostgreSQL. G0 chỉ chứng minh archive WAL và base backup chạy.
+- Diễn tập khôi phục PITR và đo RTO (N10), failover với 2 instance PostgreSQL. Từ 2026-11-15 cả archive WAL và base backup (ticket 09) cũng sang G7.
+- **(2026-11-15)** Các phần xếp sang G7 ở mục [Sửa phạm vi 2026-11-15](#sửa-phạm-vi-2026-11-15): backup `pg-main`, SSO cho Argo CD và Grafana, `kc-admin.` và `BackendTLSPolicy` cho Keycloak, `ct install`, JSON schema, NetworkPolicy và PDB của chart, SBOM và attestation, Tailscale trong CI, e2e, rollout dưới tải, đo 24 giờ.
 - Phép đo khóa bảng 1 triệu hàng, rollback dưới tải có migration expand/contract (cần bảng thật của G1).
 - Trace xuyên Kafka (N12 phần chính, G2), quét PII trong log (cần dữ liệu người mua), SLO và alert (G7), Argo Rollouts (G7).
 - Siết egress NetworkPolicy cho mọi app, service mesh, mTLS (G7).
@@ -384,6 +406,7 @@ Chưa có code trong polyrepo, nên không có test cũ để noi theo. Mẫu g�
 
   Theo [issue-tracker.md](../../agents/issue-tracker.md), mỗi ticket chỉ đưa vào một khái niệm mới, nên vài bước trên sẽ tách thành nhiều ticket (ví dụ PKI tách khỏi Envoy Gateway, Barman Cloud tách khỏi `pg-main`). Ticket là `ready-for-human` và có mục "Mục tiêu học".
 - Bước 9–13 phụ thuộc vào bước 3–8 chỉ ở phần deploy lên lab; phần build, test, `ct install` trên kind làm song song được.
-- **Điểm chưa xác minh thuộc G0**, gom từ ticket và chuẩn, phải có kết quả trước khi đóng G0: RSS `hello` ở `MaxRAMPercentage=60`; PDB của CloudNativePG khi có 1 instance; UI của Apicurio tắt được không; RAM của RustFS và Mailpit trên `gw`; chart monolithic của Tempo; span JDBC với Spring Boot 4.1; k6 trên macOS có đọc root trong Keychain không; ruleset trên tài khoản cá nhân; policy ghim SHA ở mức owner; `actions.lock`; attestation với registry HTTP; đọc package chéo repo bằng `GITHUB_TOKEN`; `nullif` với `''` trên connection đã từng đặt tham số; giới hạn 360 phút của `timeout-minutes`.
+- **(sửa 2026-11-15)** Điểm chưa xác minh phải đóng trong G0 chỉ còn: RSS `hello` ở `MaxRAMPercentage=60`; span JDBC với Spring Boot 4.1; `nullif` với `''` trên connection đã từng đặt tham số; đọc package chéo repo bằng `GITHUB_TOKEN`; chart monolithic của Tempo; UI của Apicurio tắt được không; package GHCR của repo public có tự public không (ADR-0017). Ruleset, policy ghim SHA và `actions.lock` đã xác minh ở G0-01; PDB của CloudNativePG đã xác minh ở G0-08. Phần còn lại của danh sách cũ dưới đây (attestation, k6 với Keychain, `timeout-minutes` 360, RAM của RustFS) sang G7.
+- Danh sách cũ, **điểm chưa xác minh thuộc G0**, gom từ ticket và chuẩn: RSS `hello` ở `MaxRAMPercentage=60`; PDB của CloudNativePG khi có 1 instance; UI của Apicurio tắt được không; RAM của RustFS và Mailpit trên `gw`; chart monolithic của Tempo; span JDBC với Spring Boot 4.1; k6 trên macOS có đọc root trong Keychain không; ruleset trên tài khoản cá nhân; policy ghim SHA ở mức owner; `actions.lock`; attestation với registry HTTP; đọc package chéo repo bằng `GITHUB_TOKEN`; `nullif` với `''` trên connection đã từng đặt tham số; giới hạn 360 phút của `timeout-minutes`.
 - Bản ghi thí nghiệm tổng của G0 (Charter G5: giả thuyết, cách đo, số đo, kết luận) đặt ở `docs/experiments/`, link tới các bản ghi theo chủ đề mà từng file chuẩn quy định.
 - Các quyết định **(mới)** trong spec đều đổi lại được với chi phí thấp, nên không viết ADR mới. Riêng cổng ADR-0004 có thể dẫn tới sửa ADR đó.

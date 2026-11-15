@@ -1,6 +1,8 @@
 # 31: Smoke e2e sau mỗi deploy
 
 Status: ready-for-human
+Hoãn tới: G7 (quyết định 2026-11-15, spec G0 mục "Sửa phạm vi 2026-11-15")
+Lý do: smoke e2e cần repo `e2e`, runner vào tailnet (`tag:e2e`) và token Grafana, đều là hạ tầng; ở G0 các hành vi này được kiểm tay ở ticket 29, 30 và cổng ticket 34.
 Blocked by: 12, 29, 30
 Repos: e2e, platform, gitops, docs
 Spec: [G0](../spec.md)

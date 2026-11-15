@@ -1,8 +1,10 @@
 # Chuẩn: PostgreSQL trên cụm bằng CloudNativePG
 
+Từ 2026-11-15 hạ tầng chỉ cần mức tối thiểu (CLAUDE.md, mục Chuẩn production); các mục đánh dấu Hoãn tới G7 giữ làm tham khảo.
+
 - Ngày tra: 2026-11-15, theo ticket [G0-08](../.scratch/g0-platform/issues/08-pg-main.md). Tóm từ [tra cứu 11/2026](../research/2026-11-postgres-on-cluster.md) (ticket 03 của map) và đọc lại mã nguồn docs CloudNativePG ở tag `v1.30.1` (`github.com/cloudnative-pg/cloudnative-pg/tree/v1.30.1/docs/src`, cùng nội dung với `cloudnative-pg.io/docs/1.30/`), chart `cloudnative-pg-v0.29.1`, README của `cloudnative-pg/postgres-containers`.
 - Phiên bản áp dụng: CloudNativePG **1.30.1** (phát hành 23/09/2026, bản mới nhất lúc tra; chart Helm `cloudnative-pg` **0.29.1**, `appVersion: 1.30.1`), PostgreSQL **18** image `standard`, Kubernetes 1.37, Argo CD 3.6.1, Sealed Secrets (G0-04).
-- Phạm vi: operator CloudNativePG, CR `Cluster` `pg-main`, `Database`, `DatabaseRole`, `Pooler` và Secret mật khẩu của role trong repo `gitops`; cách drain node chạy `pg-main`. Migration, quyền trên bảng và RLS xem [`db-migration.md`](db-migration.md). Backup (plugin Barman Cloud) bổ sung ở ticket G0-09. Yêu cầu liên quan: N11 (cô lập Workspace), C1 (database per service ở mức logic), N10 (backup, G0-09).
+- Phạm vi: operator CloudNativePG, CR `Cluster` `pg-main`, `Database`, `DatabaseRole`, `Pooler` và Secret mật khẩu của role trong repo `gitops`; cách drain node chạy `pg-main`. Migration, quyền trên bảng và RLS xem [`db-migration.md`](db-migration.md). Backup (plugin Barman Cloud lên RustFS, ticket G0-09) **Hoãn tới G7** (2026-11-15). Yêu cầu liên quan: N11 (cô lập Workspace), C1 (database per service ở mức logic), N10 (backup, hoãn G7).
 
 Quyết định nền: [ADR-0003](../adr/0003-shared-postgres-cluster.md) (một cluster dùng chung), [ADR-0004](../adr/0004-single-instance-by-default-on-homelab.md) (1 instance ở lab), [ADR-0010](../adr/0010-workspace-isolation-shared-schema-with-mandatory-rls.md) (RLS bắt buộc, không role đăng nhập nào `BYPASSRLS`).
 
@@ -82,8 +84,8 @@ Quyết định nền: [ADR-0003](../adr/0003-shared-postgres-cluster.md) (một
 - [ ] `kubectl drain` cần `--delete-emptydir-data` (volume nội bộ của operator, không phải thư mục dữ liệu). [Kubernetes upgrade and maintenance – Node Maintenance Window](https://cloudnative-pg.io/docs/1.30/kubernetes_upgrade/)
 
 ### Ngoài phạm vi G0-08
-- `NetworkPolicy` cho namespace `postgres` (chỉ cho phép namespace service, operator, Pooler). Chưa có chuẩn chung cho namespace hạ tầng; ghi lại để làm cùng ticket nối service đầu tiên.
-- Monitoring (`PodMonitor`, dashboard, alert) thuộc G0-13; backup thuộc G0-09.
+- `NetworkPolicy` cho namespace `postgres` (chỉ cho phép namespace service, operator, Pooler). Chưa có chuẩn chung cho namespace hạ tầng; ghi lại để làm cùng ticket nối service đầu tiên. Sửa 2026-11-15: **Hoãn tới G7**, cùng NetworkPolicy của chart `app`.
+- Monitoring (`PodMonitor`, dashboard, alert) thuộc G0-13; backup (G0-09, Barman Cloud lên RustFS) **Hoãn tới G7** (2026-11-15).
 
 ## Lựa chọn và phương án đã loại
 
@@ -98,6 +100,7 @@ Quyết định nền: [ADR-0003](../adr/0003-shared-postgres-cluster.md) (một
 
 ## Lệch chuẩn có chủ đích ở home lab
 - **1 instance, Pooler 1 pod** ([ADR-0004](../adr/0004-single-instance-by-default-on-homelab.md)) thay vì 2 instance, sync `ANY 1` như [research](../research/2026-11-postgres-on-cluster.md#33-số-instance) đề xuất. Không HA; drain và rollout làm gián đoạn database.
+- **Chưa có backup** (G0-09 hoãn G7, 2026-11-15). Mất PVC `local-path` của `pg-main` là mất mọi database, kể cả Account của Keycloak. Chấp nhận vì dữ liệu lab dựng lại được; trước khi cụm giữ dữ liệu khó dựng lại thì phải làm backup.
 - **Một cluster cho nhiều service** ([ADR-0003](../adr/0003-shared-postgres-cluster.md)), trái với FAQ CNPG khuyên mỗi microservice một cluster.
 - **K8s 1.37 chưa nằm trong danh sách hỗ trợ của 1.30.x**, chỉ "đã test".
 - **Operator 1 replica trong khi webhook mutating và validating của chart có `failurePolicy: Fail`.** Operator chết thì mọi lệnh tạo hoặc sửa `Cluster`, `Database`, `DatabaseRole`, `Pooler` bị API server từ chối tới khi pod lên lại (Argo CD retry). PostgreSQL đang chạy không bị ảnh hưởng. Cùng kiểu lệch với trust-manager ([cluster-entry.md](cluster-entry.md)). [Chart values 0.29.1](https://github.com/cloudnative-pg/charts/blob/cloudnative-pg-v0.29.1/charts/cloudnative-pg/values.yaml)

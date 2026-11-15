@@ -1,5 +1,7 @@
 # Chuẩn: Observability (trace, metric, log)
 
+Từ 2026-11-15 hạ tầng chỉ cần mức tối thiểu (CLAUDE.md, mục Chuẩn production); các mục đánh dấu Hoãn tới G7 giữ làm tham khảo. Riêng logging, metric, tracing vẫn giữ **đủ** như file này; chỉ SSO của Grafana hoãn.
+
 - Ngày tra: 2026-11-12
 - Phiên bản áp dụng: Spring Boot 4.1.2 (Micrometer 1.17.2, Micrometer Tracing 1.7.2, OpenTelemetry SDK 1.62.0 theo BOM), Spring for Apache Kafka 4.1.2; OpenTelemetry Collector v0.165.0 (chart `open-telemetry/opentelemetry-collector`); Prometheus 3.16.0 (LTS 3.13.5) qua chart `prometheus-community/kube-prometheus-stack`; Loki 3.7.9 (chart `grafana-community/loki`); Tempo 3.1.1; Grafana 13.3.1
 - Phạm vi: dependency và `application.yaml` phần `management.*`, `logging.*` của mọi service; Helm values của Collector, Prometheus, Loki, Tempo, Grafana trong repo `gitops`; tên và nhãn của business metric; dashboard, recording rule, alert. Yêu cầu liên quan: N1, N2, N3, N7, N9, N11, N12, N14
@@ -46,6 +48,7 @@
 - [ ] Loki từ chart `grafana-community/loki` (repo `https://grafana-community.github.io/helm-charts`), đặt tường minh `deploymentMode: Monolithic`, retention 14 ngày (N14). Chart cũ `grafana/loki` dừng ở 6.55.0; chế độ SimpleScalable sẽ bị bỏ ở Loki 4.0; MinIO tích hợp đã deprecated. [Loki – Migrate Helm chart to community](https://grafana.com/docs/loki/next/setup/upgrade/upgrade-helm-to-community/)
 - [ ] Tempo chế độ monolithic, retention 7 ngày (N14). Ở Tempo 3.x, monolithic chạy mọi thành phần trong một tiến trình, không cần Kafka; microservices thì cần. Chart monolithic cụ thể (repo nào sau khi chart chuyển sang grafana-community) **chưa xác minh**. [Tempo 3.0 release notes](https://grafana.com/docs/tempo/latest/release-notes/v3-0/), [Tempo – Deploy](https://grafana.com/docs/tempo/latest/set-up-for-tracing/setup-tempo/deploy/)
 - [ ] Grafana có datasource Prometheus, Loki, Tempo với liên kết trace ↔ log (theo `trace_id`) và metric → trace (exemplar). Dashboard và datasource là code trong repo `gitops`, không sửa tay trên UI. [Grafana – Helm install](https://grafana.com/docs/grafana/latest/setup-grafana/installation/helm/)
+- [ ] (Thêm 2026-11-15) Grafana đăng nhập bằng tài khoản admin cục bộ, mật khẩu lấy từ Secret do SealedSecret sinh (`admin.existingSecret` của chart Grafana; tên key **chưa xác minh** với bản chart đang dùng), không để mật khẩu mặc định. SSO qua Keycloak **Hoãn tới G7** (2026-11-15): lab một người dùng.
 - [ ] Mọi thành phần LGTM có `requests`/`limits` và nằm chung namespace `observability`. Cụm sát RAM (xem ngân sách bên dưới).
 
 ### SLO và alert (khung; chi tiết ở giai đoạn 7)
@@ -70,6 +73,7 @@
 ## Lệch chuẩn có chủ đích ở home lab
 - **Tempo monolithic trên Kubernetes.** Tài liệu Tempo không khuyên dùng cho production. Chấp nhận vì lab chỉ có một người dùng và trace chỉ giữ 7 ngày.
 - **Một bản Prometheus, một Loki, một Tempo, lưu trên `local-path`.** Không HA: node chứa backend chết thì mất số liệu trong lúc đó. Số liệu của thí nghiệm phải được xuất ra `docs/experiments/` ngay khi đo, không để lại trong Prometheus.
+- **Grafana không có SSO** (hoãn G7, 2026-11-15). Một tài khoản admin cục bộ dùng chung, không có audit theo người; chấp nhận vì lab một người dùng và chỉ vào được qua tailnet.
 - **Sampling 100%.** Production ở tải lớn thường hạ tỷ lệ hoặc dùng tail sampling; ở lab ưu tiên N12.
 - **Ngân sách RAM** ([ticket 04](../.scratch/architecture-g0-g1/issues/04-resource-budget.md#answer), **chưa đo**): tổng LGTM khoảng 3,4 GiB. Limit: Prometheus 1Gi (`--auto-gomemlimit` cần limit), Loki monolithic 512Mi, Tempo 512Mi, Grafana và sidecar 320Mi, Collector 3 × 192Mi, Alertmanager, prometheus-operator, kube-state-metrics mỗi thứ 128Mi, node-exporter 3 × 48Mi. **Tắt `chunksCache` và `resultsCache` của chart Loki**: mặc định chúng request 9830Mi và 1229Mi, không vừa node 8 GiB. Đo thật ở giai đoạn 0 rồi cập nhật ticket 04 và ADR-0004.
 

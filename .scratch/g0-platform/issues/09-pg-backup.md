@@ -1,6 +1,8 @@
 # 09: Backup liên tục `pg-main` lên RustFS
 
 Status: ready-for-human
+Hoãn tới: G7 (quyết định 2026-11-15, spec G0 mục "Sửa phạm vi 2026-11-15")
+Lý do: backup và RPO là vận hành hạ tầng, không phải trọng tâm backend của dự án; xếp vào nhóm "Vận hành production-grade" của G7.
 Blocked by: 06, 08
 Repos: gitops, platform, docs
 Spec: [G0](../spec.md)

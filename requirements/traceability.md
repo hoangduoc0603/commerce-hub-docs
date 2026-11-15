@@ -73,3 +73,4 @@ Thành phần sở hữu đã chốt cho G0–G1 ở phase thiết kế: mỗi s
 
 - `carrier-sim` và đơn tự vận chuyển chuyển sang P1 (F6.2), nên giai đoạn 4 chỉ làm giao hàng qua sàn.
 - Giai đoạn 1 đã có giữ tồn (F4.2a) và sổ cái (F4.3a). Lý do: chúng là nền cho mọi luồng sau, và cần có sớm để đo Oversell.
+- **(2026-11-15)** Phần hạ tầng sâu của giai đoạn 0 xếp sang giai đoạn 7, gồm cả backup `pg-main` (N10 phần archive WAL và base backup). Danh sách ở [spec G0](../.scratch/g0-platform/spec.md) mục "Sửa phạm vi 2026-11-15". N9, N10, N15 vẫn đo ở giai đoạn 7 như bảng mục 2.

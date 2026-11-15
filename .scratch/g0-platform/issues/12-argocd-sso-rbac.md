@@ -1,6 +1,8 @@
 # 12: Argo CD đăng nhập SSO, RBAC tối thiểu
 
 Status: ready-for-human
+Hoãn tới: G7 (quyết định 2026-11-15, spec G0 mục "Sửa phạm vi 2026-11-15")
+Lý do: SSO và RBAC cho công cụ vận hành là hạ tầng sâu; G0 vẫn dùng tài khoản `admin` cục bộ của Argo CD, và token cho `e2e` cũng theo ticket 31 sang G7.
 Blocked by: 11
 Repos: gitops, docs
 Spec: [G0](../spec.md)

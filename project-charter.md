@@ -1,12 +1,16 @@
 # commerce-hub: Project Charter
 
-- Phiên bản: 1.0
-- Ngày: 2026-11-12
+- Phiên bản: 1.1
+- Ngày: 2026-11-12, sửa 2026-11-15 (trọng tâm học, G4)
 - Trạng thái: Đã chốt
 
 ## 1. Vì sao có dự án này
 
-commerce-hub là dự án học để luyện xây dựng một hệ thống microservice ở chất lượng production: backend, frontend, event-driven, dữ liệu, container, Kubernetes, CI/CD, observability, vận hành.
+commerce-hub là dự án học để luyện xây dựng một hệ thống microservice ở chất lượng production.
+
+**Trọng tâm học** (sửa 2026-11-15): backend, microservices và event-driven với Java, Spring Boot, Kafka, PostgreSQL. Logging, metric và tracing đi kèm mọi service là một phần của trọng tâm này.
+
+**Hạ tầng là phương tiện.** Service vẫn chạy trên Kubernetes qua GitOps, có CI/CD, nhưng hạ tầng chỉ làm tới mức đủ để service chạy và quan sát được. Phần vận hành sâu (backup và khôi phục, SSO cho công cụ nội bộ, ký image, e2e, rollout dưới tải, SLO, canary, NetworkPolicy) không bị bỏ mà xếp vào Giai đoạn 7, khi đã có hệ thống thật để vận hành. Mục tiêu cuối vẫn là nắm cả hai phần.
 
 Bài toán được chọn là **SaaS quản lý bán hàng đa sàn** (multi-channel OMS) cho nhà bán trên TikTok Shop và Shopee. Lý do chọn: bài toán này tự sinh ra gần như mọi tình huống khó mà một hệ thống ecommerce thật phải xử lý:
 
@@ -27,7 +31,7 @@ Bài toán được chọn là **SaaS quản lý bán hàng đa sàn** (multi-ch
 | G1 | Luồng chính P0 chạy end-to-end trên cụm home lab | Một nhà bán đăng ký, kết nối 1 shop Shopee-sim và 1 shop TikTok-sim, ghép hàng, khai báo tồn. Đơn ở shop này làm số tồn ở shop kia giảm. Đơn được xử lý tới khi tải được vận đơn |
 | G2 | Đúng đắn dưới lỗi | Đạt N4 (không mất đơn khi mất 100% webhook) và N5 (Oversell đo được, nằm trong cửa sổ trễ) bằng kịch bản chaos của simulator |
 | G3 | Chịu tải | Đạt N6 (flash sale 500 đơn/s trong 10 phút) với số đo độ trễ và Oversell được ghi lại |
-| G4 | Vận hành được | Mỗi đơn truy được bằng một trace (N12). Có dashboard SLO và runbook cho các sự cố đã gặp |
+| G4 | Vận hành được | Mỗi đơn truy được bằng một trace (N12), có log và metric cho mọi service. Dashboard SLO và runbook sự cố làm ở Giai đoạn 7 (sửa 2026-11-15) |
 | G5 | Học có bằng chứng | Mỗi giai đoạn trong lộ trình có một bản ghi trong `experiments/`: giả thuyết, cách đo, số đo, kết luận |
 
 ## 3. Phạm vi
@@ -92,7 +96,7 @@ Increment bám theo lộ trình C18. P0 được giao qua giai đoạn 0 đến 
 | Simulator khác xa sàn thật | Học sai, adapter vô dụng | Simulator theo tài liệu chính thức (SIM-01). Chỗ chưa xác minh được thì ghi giả định và cho chỉnh bằng cấu hình |
 | Tài liệu sàn thay đổi theo tháng | Thông tin trong SRS lỗi thời | Ghi ngày tra cứu, tra lại trước khi viết từng adapter |
 | Một máy bàn không đủ tài nguyên khi chạy thử tải | Không đo được N6 | Đo ở quy mô nhỏ hơn và ghi rõ giới hạn. Có thể tách simulator và k6 sang máy khác |
-| Làm hạ tầng quá lâu trước khi có tính năng | Mất động lực | Giai đoạn 0 kết thúc bằng một service "hello" có trace, không làm hạ tầng hoàn hảo trước |
+| Làm hạ tầng quá lâu trước khi có tính năng | Mất động lực, lệch trọng tâm học | Giai đoạn 0 kết thúc bằng một service "hello" có trace, không làm hạ tầng hoàn hảo trước. Từ 2026-11-15 hạ tầng chỉ làm mức tối thiểu, phần sâu xếp vào Giai đoạn 7 (spec G0 mục "Sửa phạm vi 2026-11-15") |
 
 ## 7. Bên liên quan
 

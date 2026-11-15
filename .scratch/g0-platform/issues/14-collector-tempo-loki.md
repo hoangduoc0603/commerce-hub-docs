@@ -19,4 +19,4 @@ OTel Collector contrib chạy DaemonSet (preset `kubernetesAttributes`, `logsCol
 - [ ] Log của một pod thử thấy trên Loki; dòng log có trace ID mở được trace bằng một click.
 - [ ] Chart monolithic của Tempo đã chọn và ghi nguồn vào [observability.md](../../../standards/observability.md) (điểm chưa xác minh).
 - [ ] Log không bị thu trùng.
-- [ ] Limit memory đúng bảng ngân sách; không pod nào OOMKilled sau một ngày.
+- [ ] Limit memory đúng bảng ngân sách; không pod nào OOMKilled lúc kiểm (theo dõi dài ngày sang G7, cùng bản đo 24 giờ của ticket 34).

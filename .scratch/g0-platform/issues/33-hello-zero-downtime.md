@@ -1,6 +1,8 @@
 # 33: Rollout `hello` không lỗi dưới tải
 
 Status: ready-for-human
+Hoãn tới: G7 (quyết định 2026-11-15, spec G0 mục "Sửa phạm vi 2026-11-15")
+Lý do: đo rollout không lỗi dưới tải là bằng chứng của hạ tầng (chart, Envoy, drain node), không phải một case backend; xếp vào nhóm "Vận hành production-grade" của G7.
 Blocked by: 27, 29
 Repos: gitops, platform, load-tests, docs
 Spec: [G0](../spec.md)

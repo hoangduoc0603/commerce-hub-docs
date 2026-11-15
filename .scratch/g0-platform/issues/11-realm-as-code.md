@@ -7,7 +7,7 @@ Spec: [G0](../spec.md)
 
 ## Mô tả
 
-Realm `commerce-hub` là YAML trong `gitops`, áp bằng Job keycloak-config-cli. Bản G0 có: chính sách brute force theo BR-02, SMTP tới Mailpit `10.20.0.5:1025`, client `argocd` và `grafana` cho SSO, một client test confidential chỉ bật client credentials có mapper Audience `commerce-hub-api`, và một group admin. Secret của client là `SealedSecret`. Tài khoản admin của chủ repo tạo tay qua `kc-admin.` theo runbook. Client của `seller-web`, `admin-web` và theme đăng ký thuộc G1. Theo [keycloak.md](../../../standards/keycloak.md), [ADR-0008](../../../adr/0008-keycloak-authn-only-members-replicated-via-kafka.md).
+Realm `commerce-hub` là YAML trong `gitops`, áp bằng Job keycloak-config-cli. Bản G0 có: chính sách brute force theo BR-02, SMTP tới Mailpit `10.20.0.5:1025`, một client test confidential chỉ bật client credentials có mapper Audience `commerce-hub-api`, và một group admin. Secret của client là `SealedSecret`. Tài khoản admin của chủ repo tạo tay qua admin console mở bằng `kubectl port-forward` theo runbook. Client `argocd`, `grafana` cho SSO và hostname `kc-admin.` hoãn tới G7 (quyết định 2026-11-15, spec G0 mục "Sửa phạm vi 2026-11-15"). Client của `seller-web`, `admin-web` và theme đăng ký thuộc G1. Theo [keycloak.md](../../../standards/keycloak.md), [ADR-0008](../../../adr/0008-keycloak-authn-only-members-replicated-via-kafka.md).
 
 ## Mục tiêu học
 

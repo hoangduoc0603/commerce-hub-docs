@@ -1,6 +1,8 @@
 # Chuẩn: Container image
 
-- Ngày tra: 2026-11-12
+Từ 2026-11-15 hạ tầng chỉ cần mức tối thiểu (CLAUDE.md, mục Chuẩn production); các mục đánh dấu Hoãn tới G7 giữ làm tham khảo. G0 giữ: build một lần, tag SHA, digest, Trivy chặn HIGH/CRITICAL.
+
+- Ngày tra: 2026-11-12; sửa 2026-11-15 theo [ADR-0017](../adr/0017-images-and-charts-on-ghcr.md) (image lên GHCR) và quyết định hoãn hạ tầng sâu sang G7
 - Phiên bản áp dụng: Java 25 (Eclipse Temurin 25.0.5+8), Spring Boot 4.1.2, Docker Buildx/BuildKit (bản đi kèm Docker Desktop lúc build), Trivy v0.76.2, OCI Image Spec (nhánh `main`), Kubernetes 1.37 (kiến trúc node `linux/amd64`), Next.js (docs cập nhật 2026-09-18)
 - Phạm vi: `Dockerfile` và `.dockerignore` của mọi repo trong `services/`, `simulators/`, `frontend/`; bước build image trong reusable workflow ở `platform/.github/workflows/` (chi tiết pipeline xem [`ci-cd.md`](ci-cd.md))
 
@@ -41,12 +43,12 @@
 - [ ] Repo có `.dockerignore` loại `.git`, `.gradle`, `build/` (trừ jar cần dùng, mở lại bằng `!build/libs/*.jar`), `node_modules`, `.env*`, `*.pem`, `*.key`, file IDE. Context nhỏ thì build nhanh và không lọt bí mật vào builder. [Docker – .dockerignore files](https://docs.docker.com/build/concepts/context/#dockerignore-files)
 
 ### Tag, digest, metadata
-- [ ] Mỗi image có tag bất biến bằng git SHA đầy đủ (ví dụ `10.20.0.5:5000/order:<sha>`); không bao giờ dùng hoặc ghi đè `latest`. Tag có thể bị trỏ sang image khác, digest thì không. [Kubernetes – Images](https://kubernetes.io/docs/concepts/containers/images/)
+- [ ] Mỗi image có tag bất biến bằng git SHA đầy đủ (ví dụ `ghcr.io/<user>/commerce-hub-order:<sha>`; sửa 2026-11-15, ADR-0017, trước là `10.20.0.5:5000/order:<sha>`); không bao giờ dùng hoặc ghi đè `latest`. Tag có thể bị trỏ sang image khác, digest thì không. [Kubernetes – Images](https://kubernetes.io/docs/concepts/containers/images/)
 - [ ] CI ghi **digest** (`@sha256:...`) vào `gitops/envs/<env>/<service>/values.yaml`; tag chỉ để người đọc. Kubernetes chạy đúng một bản code mỗi lần khởi động container khi chỉ định digest. [Kubernetes – Images: image names](https://kubernetes.io/docs/concepts/containers/images/#image-names)
 - [ ] Image có các nhãn OCI: `org.opencontainers.image.source`, `.revision` (git SHA), `.version`, `.created` (RFC 3339), `.title`, `.base.name`, `.base.digest`. Truy được image về commit và base image khi có CVE. [OCI Image Spec – Annotations](https://github.com/opencontainers/image-spec/blob/main/annotations.md)
 
 ### SBOM, quét lỗ hổng, ký
-- [ ] Build với `--sbom=true` (SPDX, do BuildKit Syft scanner tạo) và giữ provenance mặc định `mode=min`. Cần driver `docker-container` hoặc containerd image store; driver `docker` với image store cổ điển báo lỗi. [Docker – SBOM attestations](https://docs.docker.com/build/metadata/attestations/sbom/), [Build attestations](https://docs.docker.com/build/metadata/attestations/)
+- [ ] **Hoãn tới G7** (2026-11-15), cùng attestation trong [`ci-cd.md`](ci-cd.md). Build với `--sbom=true` (SPDX, do BuildKit Syft scanner tạo) và giữ provenance mặc định `mode=min`. Cần driver `docker-container` hoặc containerd image store; driver `docker` với image store cổ điển báo lỗi. [Docker – SBOM attestations](https://docs.docker.com/build/metadata/attestations/sbom/), [Build attestations](https://docs.docker.com/build/metadata/attestations/)
 - [ ] CI chặn merge khi Trivy thấy lỗ hổng HIGH/CRITICAL đã có bản vá: `trivy image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 <image>`. Lỗ hổng chưa có bản vá chỉ báo cáo, không chặn. [Trivy – trivy image](https://trivy.dev/latest/docs/references/configuration/cli/trivy_image/)
 - [ ] Mọi ngoại lệ ghi trong `.trivyignore` kèm mã CVE, lý do và ngày hết hạn trong comment. Bỏ qua lỗ hổng phải là quyết định có ghi lại. [Trivy – trivy image (--ignorefile)](https://trivy.dev/latest/docs/references/configuration/cli/trivy_image/)
 - [ ] Xuất báo cáo Trivy dạng `sarif` lên GitHub Code Scanning. Lịch sử CVE xem được theo commit. [Trivy – trivy image (--format)](https://trivy.dev/latest/docs/references/configuration/cli/trivy_image/)
@@ -68,8 +70,8 @@
 
 ## Lệch chuẩn có chủ đích ở home lab
 
-- **Registry không TLS, không auth** (`10.20.0.5:5000`, docker-registry 2.8 trên `gw`). Chỉ truy cập được trong mạng lab và tailnet. Hệ quả: Docker Desktop phải khai báo `insecure-registries`; builder `docker-container` cần cấu hình BuildKit cho registry HTTP; Trivy quét qua `--insecure` hoặc quét file tar trước khi đẩy. **Chưa xác minh**: `--insecure` của Trivy có chấp nhận registry HTTP thuần hay chỉ bỏ kiểm TLS.
-- **Chưa ký image.** Registry không auth nên chữ ký không chặn được người có quyền đẩy image, và cụm chưa có admission controller kiểm chữ ký. **Chưa xác minh**: cosign hiện dùng OCI 1.1 referrers, chưa kiểm registry 2.8 có lưu được chữ ký và attestation (image index) hay không. Bật lại khi chuyển sang registry có auth (Harbor hoặc `registry:3`).
+- ~~**Registry không TLS, không auth** (`10.20.0.5:5000`, docker-registry 2.8 trên `gw`).~~ Không còn (sửa 2026-11-15, [ADR-0017](../adr/0017-images-and-charts-on-ghcr.md)): image lên GHCR `ghcr.io/<user>/<repo>`, có TLS, CI ghi bằng `GITHUB_TOKEN`. Không cần `insecure-registries` hay cấu hình BuildKit cho registry HTTP; Trivy quét thẳng image trên GHCR hoặc file tar trước khi đẩy. Câu hỏi chưa xác minh về `--insecure` của Trivy không còn.
+- **Chưa ký image** (hoãn G7, 2026-11-15, cùng SBOM và attestation). Cụm chưa có admission controller kiểm chữ ký nên chữ ký chưa chặn được gì. Câu hỏi cũ về registry 2.8 lưu chữ ký không còn; GHCR có lưu được chữ ký cosign và attestation không: **chưa xác minh**, kiểm khi làm ở G7.
 - **Image không đa kiến trúc.** Chỉ build `linux/amd64` vì cụm chỉ có amd64; build thêm arm64 tốn gấp đôi thời gian mà không dùng.
 
 ## Bằng chứng cần có
@@ -84,7 +86,7 @@ Ghi vào `docs/experiments/YYYY-MM-container-image-<service>.md`, đo cho servic
 | Lỗ hổng | `trivy image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 <img>` | 0 HIGH/CRITICAL đã có bản vá |
 | Non-root | `docker run --rm --entrypoint id <img>` | `uid=10001`, không phải 0 |
 | Kiến trúc | `docker buildx imagetools inspect <img>` | Có `linux/amd64` |
-| SBOM và nhãn | `docker buildx imagetools inspect <img> --format '{{ json .SBOM.SPDX }}'`; `docker image inspect <img> --format '{{json .Config.Labels}}'` | SBOM có gói Java và gói OS; đủ nhãn OCI ở checklist |
+| SBOM và nhãn | `docker buildx imagetools inspect <img> --format '{{ json .SBOM.SPDX }}'` (SBOM **Hoãn tới G7**); `docker image inspect <img> --format '{{json .Config.Labels}}'` | SBOM có gói Java và gói OS; đủ nhãn OCI ở checklist |
 | RSS so với limit | `kubectl top pod`, `jcmd 1 VM.native_memory summary` (khi bật `-XX:NativeMemoryTracking=summary`) | RSS đỉnh dưới 90% memory limit khi chạy tải |
 
 ## Nguồn

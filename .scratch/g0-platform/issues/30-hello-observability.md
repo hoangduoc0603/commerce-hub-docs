@@ -21,5 +21,5 @@ Spec: [G0](../spec.md)
 - [ ] LogQL theo `traceId` ra dòng log của request; từ log mở được trace bằng một click.
 - [ ] `/actuator/prometheus` có `http_server_requests_seconds_bucket`; có exemplar khi trace được sample.
 - [ ] Dashboard "Service overview" có dữ liệu của `hello`; `count({workspace_id!=""})` trả rỗng.
-- [ ] Chạy k6 ngắn với `sampling.probability` 1.0 và 0.0: ghi chênh lệch p99 và CPU.
+- [ ] Chạy k6 ngắn với `sampling.probability` 1.0 và 0.0: ghi chênh lệch p99 và CPU. k6 chạy trên Mac; nếu k6 chưa tin root CA của lab thì dùng `--insecure-skip-tls-verify` và ghi lại (kiểm k6 đọc Keychain đã hoãn tới G7, 2026-11-15).
 - [ ] Ma trận truy vết, dòng N12: G0 xong phần khung, kèm link dashboard và một trace ID mẫu.

@@ -490,6 +490,8 @@ Simulator quyết định có đo được hệ thống hay không, nên phải 
 
 Mỗi giai đoạn kết thúc bằng một thứ chạy được trên cụm home lab và một bản ghi thí nghiệm có số đo.
 
+Từ 2026-11-15 trọng tâm học là backend, microservices, event-driven; hạ tầng ở giai đoạn 0–6 chỉ làm mức tối thiểu, phần sâu dồn vào giai đoạn 7 ([Charter](project-charter.md) mục 1, [spec G0](.scratch/g0-platform/spec.md) mục "Sửa phạm vi 2026-11-15").
+
 | Giai đoạn | Nội dung | Kỹ thuật trọng tâm | Kết quả đo được |
 |---|---|---|---|
 | **0. Nền tảng** | Repo `docs`, `platform`, `gitops`, template repo cho service, cụm home lab, Argo CD, PostgreSQL, Kafka, Keycloak, LGTM, CI | K8s, GitOps, OTel | Một service "hello" có trace và dashboard |
@@ -499,7 +501,7 @@ Mỗi giai đoạn kết thúc bằng một thứ chạy được trên cụm ho
 | **4. Xử lý đơn** | Saga xử lý đơn, fulfillment, carrier-sim, vận đơn bất đồng bộ, hoàn trả | Saga, state machine, job dài | Saga đúng khi kill pod giữa chừng |
 | **5. Tải và scale** | Kịch bản flash sale; KEDA theo lag; hot SKU; tinh chỉnh partition, pool, virtual thread | KEDA, profiling, partition | N6: 500 đơn/s, oversell và độ trễ |
 | **6. Đọc và báo cáo** | OpenSearch, ClickHouse, Kafka Streams; dashboard real-time (SSE) | CQRS, stream processing | Độ trễ projection |
-| **7. Vận hành production-grade** | Canary (Argo Rollouts), SLO alert, runbook, NetworkPolicy, secret, mesh/mTLS; postmortem từ chaos | SRE, bảo mật | Một canary tự rollback nhờ metric |
+| **7. Vận hành production-grade** | Canary (Argo Rollouts), SLO alert, runbook, NetworkPolicy, secret, mesh/mTLS; postmortem từ chaos. Từ 2026-11-15 thêm phần hạ tầng xếp sau từ G0: backup `pg-main` và diễn tập khôi phục, SSO cho Argo CD và Grafana, `kc-admin.` và `BackendTLSPolicy` cho Keycloak, SBOM và attestation, `ct install` và NetworkPolicy của chart, smoke e2e qua Tailscale, rollout không lỗi dưới tải, đo 24 giờ | SRE, bảo mật | Một canary tự rollback nhờ metric |
 
 ## C19. Chủ đề phỏng vấn gắn với dự án
 
