@@ -14,7 +14,7 @@ flowchart TB
         edge["<b>edge</b><br/>[Container: Envoy Gateway v1.10.0, Gateway API]<br/>Cửa vào cụm, 10.20.0.200. Kết thúc TLS<br/>*.lab.internal, định tuyến theo HTTPRoute"]
         web["<b>seller-web</b><br/>[Container: Next.js 16.4, Node]<br/>Giao diện + BFF mỏng. Giữ phiên và token<br/>ở server, proxy /api/* xuống gateway"]
         kc["<b>Keycloak</b><br/>[Container: Keycloak 26.8.2]<br/>Realm commerce-hub. Chỉ xác thực Account"]
-        gw["<b>gateway</b><br/>[Container: Spring Cloud Gateway]<br/>ClusterIP. Kiểm JWT, định tuyến"]
+        gw["<b>gateway</b><br/>[Container: Spring Cloud Gateway Server MVC]<br/>ClusterIP. Kiểm JWT, định tuyến"]
         ws["<b>workspace</b><br/>[Container: Spring Boot, JPA]"]
         cc["<b>channel-connector</b><br/>[Container: Spring Boot, JdbcClient]"]
         cat["<b>catalog</b><br/>[Container: Spring Boot, JPA]"]
@@ -84,9 +84,9 @@ Kafka chạy bằng Strimzi (3 broker KRaft, RF 3, `min.insync.replicas` 2), sch
 |---|---|---|---|---|---|
 | `edge` | Envoy Gateway v1.10.0, Gateway API v1.6.1 | Cửa vào cụm: kết thúc TLS bằng chứng chỉ wildcard `*.lab.internal`, redirect HTTP sang HTTPS, định tuyến theo `HTTPRoute` của từng app, re-encrypt tới Keycloak. App `platform` sở hữu | — | — | — |
 | `seller-web` | Next.js 16.4, `openid-client` 6, TanStack Query, driver `pg` | Giao diện tiếng Việt. BFF mỏng: phiên, refresh, CSRF, proxy 1:1 `/api/*`. Không gom dữ liệu, không logic nghiệp vụ. Trình duyệt tự gom dữ liệu của hai service | `seller_web`: bảng phiên, token mã hóa AES-GCM. Không có `workspace_id` (phiên thuộc Account) | — | — |
-| `gateway` | Spring Cloud Gateway; bản WebFlux hay MVC chưa chốt | Kiểm JWT, định tuyến tới service. Chỉ nhận traffic từ `seller-web`. Không CORS, không kiểm Member | — | — | — |
+| `gateway` | Spring Cloud Gateway Server MVC (train 2025.1.x), virtual thread | Kiểm JWT (mọi route), định tuyến theo tiền tố tài nguyên `/v1/...` tới service. Chỉ nhận traffic từ `seller-web`. Không CORS, không kiểm Member, không rate limit ở G1. Timeout chung, không retry ([ticket 18](../.scratch/architecture-g0-g1/issues/18-gateway-g1.md#answer)) | — | — | — |
 | `workspace` | Spring Boot 4.1, JPA | Account (tạo JIT ở `GET /me`), Workspace, Member, Role, Scope (F1.1a–c, F1.2a–b). Cổng `email_verified` khi tạo Workspace. Lệnh phát lại Member | Account (bảng toàn cục, không RLS), Workspace, Member | `workspace.members` | — |
-| `channel-connector` | Spring Boot 4.1, `JdbcClient` | Kết nối Shop qua OAuth (F2.1a), lưu token, kéo Listing và đơn ban đầu (F2.4a), poll đơn (F5.2b), chuẩn hóa sang canonical (F5.2c). Tính UUIDv5. Ánh xạ trạng thái sàn | Shop, token sàn (mã hóa, N11), checkpoint, job kéo dữ liệu | `channel.orders`, `channel.listings` | — |
+| `channel-connector` | Spring Boot 4.1, `JdbcClient` | Kết nối Shop qua OAuth (F2.1a), lưu token, kéo Listing và đơn ban đầu (F2.4a), poll đơn (F5.2b), chuẩn hóa sang canonical (F5.2c). Tính UUIDv5. Ánh xạ trạng thái sàn | Shop, `shop_authorization` (token mã hóa Tink, N11, [ADR-0016](../adr/0016-marketplace-token-encryption-with-tink.md)), `sync_cursor` (hàng đợi việc và checkpoint theo Shop × `ORDER`/`LISTING`/`TOKEN`, [ADR-0015](../adr/0015-marketplace-sync-as-postgres-work-queue.md)) | `channel.orders`, `channel.listings` | — |
 | `catalog` | Spring Boot 4.1, JPA (upsert có version guard bằng native query) | Master SKU (F3.1a), Listing (F3.2a), ghép tự động và thủ công (F3.3a–b), job tạo Master SKU hàng loạt (F3.3c). Lệnh phát lại Mapping | Master SKU, Listing, Mapping, job F3.3c | `catalog.listing-mappings` | `channel.listings` |
 | `inventory` | Spring Boot 4.1, `JdbcClient` | StockItem, Available (F4.1a), "Đặt số tồn" và "Điều chỉnh" (F4.1b), giữ và nhả tồn (F4.2a–b), sổ cái (F4.3a), Short order (BR-19), Warehouse mặc định (BR-17), job bất biến BR-29, metric Oversell | `stock_item`, `reservation`, `ledger_entry`, `order_inventory_state` | `inventory.short-orders` | `order.stock-demands` |
 | `order` | Spring Boot 4.1, `JdbcClient` | Order canonical và trạng thái chuẩn hóa, danh sách đơn gộp (F5.1a), che thông tin người nhận theo Role (N11). Gắn Master SKU vào dòng đơn từ bản sao Mapping (BR-16). Quyết định trạng thái nào giữ tồn (BR-18) | Order, OrderLine, bản sao Mapping (một dòng mỗi Listing), bản sao Short order | `order.stock-demands` | `channel.orders`, `catalog.listing-mappings`, `inventory.short-orders` |
@@ -94,7 +94,7 @@ Kafka chạy bằng Strimzi (3 broker KRaft, RF 3, `min.insync.replicas` 2), sch
 | `pg-main` | CloudNativePG 1.30.1, PostgreSQL 18; Pooler PgBouncer `transaction` | Database cho mọi service, Keycloak, `seller_web` và `marketplace_sim`. 1 instance ở lab. Backup Barman Cloud lên RustFS, `archive_timeout` 1 phút (N10) | — | — | — |
 | Kafka, Apicurio | Strimzi 1.3.1, Kafka 4.3.2; Apicurio Registry 3.3 | Backbone event, Schema Registry | — | — | — |
 
-Mọi service ở bảng trên (trừ `seller-web` và `gateway`) đọc `workspace.members` bằng thư viện `workspace-access`. Thư viện tự gán mọi partition, không dùng consumer group, đọc lại từ đầu khi khởi động. Pod chỉ ready khi đã đọc tới end offset ([ADR-0008](../adr/0008-keycloak-authn-only-members-replicated-via-kafka.md)).
+Mọi service ở bảng trên (trừ `seller-web` và `gateway`) đọc `workspace.members` bằng phần code `workspace-access` (nằm trong service; chép hay tách thư viện quyết ở G1, [ADR-0018](../adr/0018-self-contained-services-no-shared-library-yet.md)). Phần này tự gán mọi partition, không dùng consumer group, đọc lại từ đầu khi khởi động. Pod chỉ ready khi đã đọc tới end offset ([ADR-0008](../adr/0008-keycloak-authn-only-members-replicated-via-kafka.md)).
 
 Chưa có ở G1: `webhook-ingress`, `notification` (G2), `fulfillment` (G4), `reporting` (G6), Redis (G3).
 
@@ -143,17 +143,17 @@ flowchart LR
     kout -. "cài đặt" .-> port
 ```
 
-- Luật ArchUnit (trong `service-kit` module `test-support`): `domain` không import Spring hay adapter; `application` không import adapter. Service JPA được dùng `jakarta.persistence.*` trong `domain`.
-- Phần lặp lại giữa các service nằm trong `libs/service-kit`, không chép vào từng repo:
+- Quy ước phụ thuộc (không có test tự động, [ADR-0018](../adr/0018-self-contained-services-no-shared-library-yet.md)): `domain` không import Spring hay adapter; `application` không import adapter. Service JPA được dùng `jakarta.persistence.*` trong `domain`.
+- Chưa có thư viện dùng chung ([ADR-0018](../adr/0018-self-contained-services-no-shared-library-yet.md)). Phần lặp lại giữa các service nằm trong từng service, chép từ template `hello` khi tạo service. Bảng dưới là các nhóm code từng dự kiến đặt trong `libs/service-kit`; giữ làm danh sách ứng viên khi G1 xét lại việc tách thư viện:
 
-| Module | Chứa |
+| Nhóm (từng là module) | Chứa |
 |---|---|
 | `workspace-access` | `ScopedValue` giữ Workspace, filter HTTP dựng `MemberContext`, interceptor consumer Kafka, bản sao Member, hook RLS; `test-fixtures` gồm test catalog RLS và test hành vi qua PgBouncer |
 | `ids` | UUIDv7 |
 | `events` | Port publish (bản G1 `AFTER_COMMIT`), cấu hình producer, error handler retry rồi DLT |
 | `web` | Problem Details, cursor, `Idempotency-Key`, `ETag`/`If-Match` |
-| `test-support` | Luật ArchUnit, cấu hình Testcontainers |
-| `gradle-plugin` | Convention plugin `commercehub.spring-service`: ghim Java 25 và minor Spring Boot, khai báo repository, bật ArchUnit |
+| `test-support` | ~~Luật ArchUnit~~, cấu hình Testcontainers |
+| ~~`gradle-plugin`~~ | ~~Convention plugin `commercehub.spring-service`~~. Bỏ: mỗi service tự khai build theo mặc định Initializr ([spring-service.md](../standards/spring-service.md)) |
 
 Không vào thư viện: logic nghiệp vụ, bảng quyền F1.2a của từng service, code sinh từ Avro/OpenAPI, UUIDv5 tất định (thuộc `contracts`), version guard, business metric.
 

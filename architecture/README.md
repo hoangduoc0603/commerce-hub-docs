@@ -14,7 +14,7 @@ Tài liệu này **tổng hợp**, không quyết định. Mỗi quyết định
 | 6. Runtime view | — | Chưa viết. Luồng G1 viết ở spec G1 |
 | 7. Deployment view | — | Chưa viết. Cửa vào cụm đã chốt ở [ticket 16](../.scratch/architecture-g0-g1/issues/16-cluster-entry.md#answer) (ADR-0013, ADR-0014); viết ở spec G0 |
 | 8. Khái niệm xuyên suốt | [08-crosscutting-concepts.md](08-crosscutting-concepts.md) | G0–G1 |
-| 9. Quyết định kiến trúc | [09-architecture-decisions.md](09-architecture-decisions.md) | ADR-0001..0014 |
+| 9. Quyết định kiến trúc | [09-architecture-decisions.md](09-architecture-decisions.md) | ADR-0001..0016 |
 | 10–12. Chất lượng, rủi ro, thuật ngữ | — | Chưa viết. Thuật ngữ ở [GLOSSARY](../GLOSSARY.md) |
 
 ## Quy ước

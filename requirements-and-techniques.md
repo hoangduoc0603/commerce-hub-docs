@@ -135,7 +135,7 @@ workspace  catalog    inventory  order    fulfillment   reporting   notification
 
 | Service | Trách nhiệm | Dữ liệu sở hữu | Lưu trữ |
 |---|---|---|---|
-| **gateway** | Định tuyến, xác thực JWT, rate limit theo Workspace. Chỉ nhận traffic từ BFF trong cụm, không cấu hình CORS ([ADR-0011](adr/0011-nextjs-bff-with-server-side-session.md)) | — | Redis (rate limit) |
+| **gateway** | Định tuyến, xác thực JWT; rate limit theo Workspace từ G3 (khóa có `sub`). Chỉ nhận traffic từ BFF trong cụm, không cấu hình CORS ([ADR-0011](adr/0011-nextjs-bff-with-server-side-session.md), [ticket 18](.scratch/architecture-g0-g1/issues/18-gateway-g1.md#answer)) | — | — (G3: Redis cho rate limit) |
 | **workspace** | Workspace, Account, Member, vai trò, gói dịch vụ, hạn mức | workspace, account, member, plan, quota usage | PostgreSQL |
 | **channel-connector** | Kết nối shop, token, gọi API sàn, rate limit sàn, đồng bộ tăng dần, chuyển dữ liệu sàn ↔ canonical | shop connection, encrypted token, sync checkpoint, outbound job | PostgreSQL + Redis |
 | **webhook-ingress** | Nhận push, kiểm chữ ký, ghi Kafka, trả 200 | — (không có DB, chỉ dedupe ngắn hạn) | Redis |
@@ -233,7 +233,7 @@ Phiên bản nền: Java 25, **Spring Boot 4.1.x** (cùng dòng với `sp-jpa`).
 | **Database per service** | Mọi service có DB/schema riêng | Không service nào đọc trực tiếp bảng của service khác. Cần dữ liệu của nhau thì qua API hoặc event |
 | **Anti-corruption layer, ports & adapters (hexagonal)** | channel-connector: interface `MarketplacePort` có `TikTokAdapter`, `ShopeeAdapter`; fulfillment: `CarrierPort` | Ngăn khái niệm của sàn rò vào lõi. Thêm sàn mới chỉ viết adapter (N13). Chạy được với simulator hoặc sàn thật bằng cấu hình |
 | **Canonical data model** | Order status, product/variant, stock | Một mô hình chung, mỗi sàn ánh xạ vào |
-| **API Gateway** | gateway | Một cổng vào: xác thực, rate limit theo Workspace, định tuyến |
+| **API Gateway** | gateway | Một cổng vào: xác thực, định tuyến (Spring Cloud Gateway Server MVC); rate limit theo Workspace từ G3 |
 | **BFF** | Next.js server (route handler) | Giữ token OIDC ở server, trình duyệt chỉ có cookie phiên; proxy mỏng `/api/*` xuống gateway, không gom dữ liệu ở G1 ([ADR-0011](adr/0011-nextjs-bff-with-server-side-session.md)) |
 | ~~**Modular monolith trước, tách sau**~~ | Không dùng | Đã bỏ: tách service theo B1 ngay từ Giai đoạn 1. Lý do ở [arc42 mục 4.2](architecture/04-solution-strategy.md#42-vì-sao-bỏ-modular-monolith) |
 | **ADR** | `adr/` của repo `docs` (cấp hệ thống) và `docs/adr/` trong từng repo service | Ghi lại quyết định và lý do. Đây là chất liệu tốt cho phỏng vấn |

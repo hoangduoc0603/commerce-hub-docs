@@ -1,7 +1,7 @@
 # commerce-hub: Đặc tả yêu cầu phần mềm (SRS)
 
-- Phiên bản: 1.3
-- Ngày: 2026-11-13 (1.3: BR-17 Warehouse mặc định do inventory tạo khi lần đầu cần, F4.1b thêm lý do hệ thống "Lấy từ sàn", ticket 09 của map kiến trúc G0–G1; 1.2: F1.1a xác minh email bằng link, BR-02 viết theo cách đếm của Keycloak, ticket 05 của map kiến trúc G0–G1; 1.1: BR-19 với Master SKU chưa khai báo tồn, ticket 10 của map kiến trúc G0–G1)
+- Phiên bản: 1.4
+- Ngày: 2026-11-13 (1.4: thêm AS-10 về kéo Listing tăng dần của Shopee, ticket 17 của map kiến trúc G0–G1; 1.3: BR-17 Warehouse mặc định do inventory tạo khi lần đầu cần, F4.1b thêm lý do hệ thống "Lấy từ sàn", ticket 09 của map kiến trúc G0–G1; 1.2: F1.1a xác minh email bằng link, BR-02 viết theo cách đếm của Keycloak, ticket 05 của map kiến trúc G0–G1; 1.1: BR-19 với Master SKU chưa khai báo tồn, ticket 10 của map kiến trúc G0–G1)
 - Trạng thái: Đã chốt cho P0
 - Liên quan: [Project Charter](../project-charter.md) · [Glossary](../GLOSSARY.md) · [Domain model](domain-model.md) · [Luồng người dùng](user-flows.md) · [Ma trận truy vết](traceability.md) · [Kỹ thuật áp dụng](../requirements-and-techniques.md)
 
@@ -795,6 +795,7 @@ Các điểm dưới đây chưa xác minh được từ tài liệu chính th�
 | AS-07 | Refresh token TikTok không xoay vòng, nhưng hệ thống vẫn thiết kế như có xoay vòng (BR-10) | Chưa xác minh |
 | AS-08 | Hạn mức mặc định của Simulator: 10 request/s cho mỗi app × shop × nhóm endpoint (Shopee); TikTok theo gợi ý ở A2 | Shopee không công bố QPS |
 | AS-09 | Đơn COD của TikTok không đi qua `UNPAID` mà vào thẳng `ON_HOLD` hoặc `AWAITING_SHIPMENT` | Chưa xác minh |
+| AS-10 | Shopee `get_item_list` lọc được theo `update_time_from`/`update_time_to` và trả cả item `DELETED` khi được yêu cầu, nên kéo Listing hằng ngày (F3.2a) chạy tăng dần được | Chỉ có nguồn thứ cấp; open.shopee.com chưa đọc được (tra 2026-11-13) |
 
 Câu hỏi mở, sẽ quyết định ở phase thiết kế (không ảnh hưởng hành vi người dùng thấy):
 - Số partition cho các luồng tồn kho, và cách xử lý SKU nóng (C13).

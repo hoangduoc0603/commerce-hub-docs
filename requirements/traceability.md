@@ -18,10 +18,10 @@ Thành phần sở hữu đã chốt cho G0–G1 ở phase thiết kế: mỗi s
 | F1.2a–b Vai trò, phạm vi | workspace, mọi service | 1 | | Phân quyền theo phạm vi; Member nhân bản qua Kafka ([ADR-0008](../adr/0008-keycloak-authn-only-members-replicated-via-kafka.md)). G1 chỉ có Owner qua giao diện, Member khác tạo bằng fixture của test (lời mời ở G2) | | | Chưa làm |
 | F1.2c Thu hồi quyền ngay | gateway, notification | 3 | | Thu hồi JWT, đóng SSE | | | Chưa làm |
 | F2.1a Kết nối OAuth | channel-connector | 1 | SIM-04 | OAuth code flow, idempotent callback | | | Chưa làm |
-| F2.2a Làm mới token | channel-connector | 3 | SIM-05 | Single-flight, distributed lock | | | Chưa làm |
+| F2.2a Làm mới token | channel-connector | 1 (làm mới theo lịch bằng lease), 3 (single-flight có fencing, thí nghiệm) | SIM-05 | Single-flight, distributed lock | [ADR-0015](../adr/0015-marketplace-sync-as-postgres-work-queue.md), [ADR-0016](../adr/0016-marketplace-token-encryption-with-tink.md) (mã hóa, N11) | | Chưa làm |
 | F2.2b Cảnh báo hết hạn | channel-connector, notification | 3 | SIM-17 | Scheduler | | | Chưa làm |
 | F2.3a Ngắt kết nối | channel-connector | 3 | SIM-17 | Hủy lệnh đang xếp hàng | | | Chưa làm |
-| F2.4a Kéo dữ liệu, kéo bù | channel-connector | 1 (cơ bản), 3 (đủ) | SIM-08, N7 | Job có checkpoint, hàng đợi ưu tiên, fairness | | | Chưa làm |
+| F2.4a Kéo dữ liệu, kéo bù | channel-connector | 1 (30 ngày theo đoạn, chạy tiếp sau restart, tiến độ bằng độ trễ checkpoint), 3 (đơn mở cũ hơn 30 ngày, ưu tiên, fairness) | SIM-08, N7 | Job có checkpoint, hàng đợi ưu tiên, fairness | [ADR-0015](../adr/0015-marketplace-sync-as-postgres-work-queue.md) | | Chưa làm |
 | F3.1a Master SKU | catalog | 1 | N17 | Optimistic locking, tìm kiếm | | | Chưa làm |
 | F3.2a Kéo Listing | channel-connector, catalog | 1 | SIM-19 | ACL, upsert idempotent | [ADR-0009](../adr/0009-deterministic-ids-for-marketplace-entities.md) | | Chưa làm |
 | F3.3a–b Ghép tự động, thủ công | catalog, inventory, order | 1 | | Event bù trừ giữa context | [ADR-0009](../adr/0009-deterministic-ids-for-marketplace-entities.md) | | Chưa làm |
@@ -35,7 +35,7 @@ Thành phần sở hữu đã chốt cho G0–G1 ở phase thiết kế: mỗi s
 | F4.3a Sổ cái | inventory | 1 | N16 | Event sourcing giới hạn, kiểm bất biến | [ADR-0007](../adr/0007-stock-balance-plus-ledger-in-one-transaction.md) | | Chưa làm |
 | F5.1a Danh sách đơn | order (+ read model) | 1 | N17 | Cursor, CQRS | | | Chưa làm |
 | F5.2a Webhook | webhook-ingress, channel-connector | 2 | N1, N2, N15, SIM-14, SIM-15 | HMAC, ghi bền rồi trả lời, dedupe, sai thứ tự | | | Chưa làm |
-| F5.2b Kéo bù đơn | channel-connector | 1 (poll), 3 (đối soát) | N4, SIM-08 | Cửa sổ chồng lấn, checkpoint | | | Chưa làm |
+| F5.2b Kéo bù đơn | channel-connector | 1 (poll), 3 (đối soát: chỉ số đơn thiếu, chaos N4) | N4, SIM-08 | Cửa sổ chồng lấn, checkpoint | [ADR-0015](../adr/0015-marketplace-sync-as-postgres-work-queue.md) | | Chưa làm |
 | F5.2c Chuẩn hóa đơn | channel-connector, order | 1 | N13 | ACL, canonical model | [ADR-0009](../adr/0009-deterministic-ids-for-marketplace-entities.md) | | Chưa làm |
 | F5.3a Chuẩn bị hàng | order, fulfillment | 4 | SIM-07 | Saga, state machine | | | Chưa làm |
 | F5.4a–b Hủy, yêu cầu hủy | order, channel-connector | 4 | SIM-09 | Lệnh idempotent, xác nhận bất đồng bộ | | | Chưa làm |

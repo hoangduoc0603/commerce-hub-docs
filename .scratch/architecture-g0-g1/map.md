@@ -33,10 +33,13 @@ Ngày mở: 2026-11-12
 - [14 Khung arc42 và C4 Context/Container](issues/14-arc42-c4.md): [`docs/architecture/`](../../architecture/README.md) có arc42 mục 1–5, 8–9 và C4 Context, Container (Mermaid). Mục 4.2 ghi lý do bỏ modular monolith; C1, B1 và ma trận truy vết đã trỏ về đó. Mở ticket 16 vì cửa vào cụm chưa chốt.
 - [15 Repo public hay private](issues/15-repo-visibility.md): mọi repo public trên tài khoản cá nhân (Free, MIT), CI dùng GitHub-hosted runner vào lab qua Tailscale, nhánh chỉ chặn force push/xóa (ADR-0006).
 - [16 Cửa vào cụm: Gateway API, TLS và hostname của lab](issues/16-cluster-entry.md): Gateway API với Envoy Gateway v1.10.0, một Gateway `edge` do `platform` sở hữu, chart `app` sinh HTTPRoute (ADR-0013). CA nội bộ root offline, `lab.internal` phân giải qua dnsmasq trên `gw`, trust-manager cho JVM; Keycloak re-encrypt, chỉ mở realm `commerce-hub`; Mailpit trên `gw` (ADR-0014). Biên RAM còn khoảng 520 MiB.
+- [17 channel-connector ở G1: polling đơn và mã hóa token sàn](issues/17-connector-g1.md): mọi việc đồng bộ (poll đơn, kéo bù, kéo Listing, làm mới token) là hàng đợi việc theo (Shop, loại việc) trong Postgres có lease, nhận qua hàm `_lookup` (ADR-0015). Checkpoint là `time_to` của cửa sổ đã xong, dời sau ack, cửa sổ dài cắt đoạn 1 ngày. F2.4a G1 dùng chung cơ chế (30 ngày), phần đủ để G3. Token mã hóa bằng Tink AEAD, keyset cleartext trong Sealed Secret, xoay khóa không cần mã hóa lại (ADR-0016). SRS 1.4 thêm AS-10.
+- [18 Gateway ở G1: MVC hay WebFlux, rate limit theo Workspace](issues/18-gateway-g1.md): Spring Cloud Gateway Server MVC (train 2025.1.x) sinh từ template `hello`, bỏ persistence. Không rate limit ở G1. `X-Workspace-Id` chuyển nguyên, service trả 404. Mọi route bắt buộc JWT; callback OAuth của sàn về một trang của `seller-web`. Đường dẫn theo tài nguyên có tiền tố `/v1`. Timeout chung 2s/10s, quá thì 504; không retry, không circuit breaker.
+- [19 Chiến lược test G1 và bộ test tuân thủ của simulator](issues/19-g1-test-strategy.md): không Pact ở G0–G1 (lệch C14 có chủ đích), REST kiểm bằng `oasdiff` cộng validator OpenAPI, event kiểm tương thích cộng serde Avro thật. Bộ tuân thủ nằm trong `marketplace-sim`, fixture chép nguyên văn tài liệu Shopee (đọc được bằng trình duyệt tích hợp); connector test adapter bằng WireMock từ bản chép riêng. Repo `e2e` (Playwright) chạy trên GitHub-hosted runner sau `argocd app wait`, mỗi lần tạo dữ liệu riêng rồi cho Shop `Disconnected`. G1 không có tải, chaos; F2.4a kiểm ở integration. Có bảng phân tầng và DoD test, không ngưỡng coverage.
 
 ## Not yet specified
 
-<!-- Trống: fog đã chuyển thành ticket 17, 18, 19 ngày 2026-11-13. -->
+<!-- Trống: fog đã chuyển thành ticket 17, 18, 19 ngày 2026-11-13, và cả ba đã chốt. Không còn ticket mở: map tới đích, bước kế là `/to-spec` cho G0 và G1. -->
 
 ## Out of scope
 
@@ -48,3 +51,5 @@ Ngày mở: 2026-11-12
 - Simulator ghi chung `pg-main` làm nhiễu phép đo N6 ở 500 đơn/s (từ [12 Kiến trúc shopee-sim cho SIM-01..08](issues/12-shopee-sim.md)). Lý do: chỉ lộ ra ở G5; xem lại khi có số đo.
 - Tilt, Skaffold, Telepresence (từ [13 Vòng phát triển local](issues/13-dev-loop.md)). Lý do: ở G0–G1 vòng code chạy trên host, không chạy trong cụm. Telepresence phải cài traffic-manager vào lab, mà lab không còn RAM (ADR-0004).
 - Thí nghiệm SSE qua BFF ở chế độ standalone: `request.signal` có abort đúng hay không, compression có rò bộ nhớ khi client ngắt hay không (từ [07 Frontend truy cập API](issues/07-frontend-access.md)). Lý do: SSE chỉ có từ G2; G1 chỉ chốt hướng.
+- Rate limit theo Workspace ở gateway (từ [18 Gateway ở G1](issues/18-gateway-g1.md)). Lý do: không mã yêu cầu G1 nào cần; Redis vào ngân sách từ G3 (ADR-0004). Khi làm, khóa đếm phải có `sub`, không dùng `X-Workspace-Id` thô vì gateway không kiểm Member.
+- Thí nghiệm SSE qua gateway Server MVC ở G2: stream 30 phút, client ngắt và upstream cắt giữa chừng (issue #4357 còn mở). Timeout chung 10s của gateway sẽ cắt SSE, nên route SSE cần `ClientHttpRequestFactory` riêng hoặc client có idle timeout. Không đạt thì đổi sang WebFlux kèm ADR (từ [18 Gateway ở G1](issues/18-gateway-g1.md)). Lý do: SSE chỉ có từ G2.

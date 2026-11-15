@@ -14,7 +14,7 @@ Quyết định: [ADR-0010](../adr/0010-workspace-isolation-shared-schema-with-m
 
 - **Shared schema.** Mọi bảng chứa dữ liệu của Workspace có cột `workspace_id uuid`. Code luôn ghi rõ điều kiện `workspace_id`; RLS là thứ bảo đảm khi code quên.
 - **RLS bắt buộc.** Mọi bảng có `workspace_id` bật `ENABLE` và `FORCE ROW LEVEL SECURITY`, policy `FOR ALL` cho mọi role với cùng biểu thức ở `USING` và `WITH CHECK`: `workspace_id = nullif(current_setting('app.workspace_id', true), '')::uuid`. Không role đăng nhập được nào có `BYPASSRLS`.
-- **Workspace vào transaction từ ba nguồn**, giữ trong một `ScopedValue` của `workspace-access`:
+- **Workspace vào transaction từ ba nguồn**, giữ trong một `ScopedValue` của phần code `workspace-access` trong service ([ADR-0018](../adr/0018-self-contained-services-no-shared-library-yet.md)):
 
   | Nguồn | Lấy Workspace từ |
   |---|---|
@@ -39,10 +39,10 @@ Quyết định: [ADR-0008](../adr/0008-keycloak-authn-only-members-replicated-v
 | Account trong hệ thống | `workspace`, tạo JIT ở lần gọi `GET /me` đầu tiên |
 | Workspace, Member, Role, Scope | `workspace`, phát trạng thái đầy đủ lên `workspace.members` (compact, gỡ Member là tombstone) |
 | Workspace đang làm việc | Header `X-Workspace-Id` mỗi request. Chuyển Workspace không đổi token |
-| Kiểm JWT | gateway và mọi service |
+| Kiểm JWT | gateway (mọi route, không ngoại lệ) và mọi service |
 | Kiểm Member, Role, Scope | Mỗi service, bằng bản sao Member trong bộ nhớ. Mỗi service tự giữ bảng quyền F1.2a cho tài nguyên của mình |
 
-- **Không phải Member, hoặc đối tượng ngoài Scope, thì trả 404**, không trả 403 (BR-04).
+- **Không phải Member, hoặc đối tượng ngoài Scope, thì trả 404**, không trả 403 (BR-04). `X-Workspace-Id` thiếu, sai định dạng hoặc lặp cũng trả 404. Gateway chuyển nguyên header này, không kiểm ([ticket 18](../.scratch/architecture-g0-g1/issues/18-gateway-g1.md#answer)).
 - **Scope (F1.2b)**: truy vấn danh sách lọc theo `shop_id ∈ Scope` (Warehouse với Role Kho). Member giữ nhiều Role thì được hợp quyền.
 - **Không fail-open**: Kafka không tới được thì pod không ready. Thư viện không gọi `workspace` khi không thấy Member.
 - **Gọi giữa service** (chỉ F3.3c ở G1): token client credentials của bên gọi kèm `X-Workspace-Id`. Bên nhận chấp nhận Workspace từ service account trong danh sách cho phép, không kiểm Member, không chuyển tiếp token người dùng. Bút toán ghi người thực hiện là service account, kèm `onBehalfOf` là Member đã chạy job.
@@ -104,8 +104,10 @@ Quyết định: ticket [09](../.scratch/architecture-g0-g1/issues/09-g1-contrac
 
 ## 8.7 Quy ước REST
 
-Quyết định: ticket [09](../.scratch/architecture-g0-g1/issues/09-g1-contracts.md#answer), [11](../.scratch/architecture-g0-g1/issues/11-service-template.md#answer). Cài đặt trong `service-kit` module `web`.
+Quyết định: ticket [09](../.scratch/architecture-g0-g1/issues/09-g1-contracts.md#answer), [11](../.scratch/architecture-g0-g1/issues/11-service-template.md#answer), [18](../.scratch/architecture-g0-g1/issues/18-gateway-g1.md#answer). Cài đặt trong từng service, chép từ template `hello` ([ADR-0018](../adr/0018-self-contained-services-no-shared-library-yet.md)).
 
+- **Đường dẫn**: theo tài nguyên, có tiền tố `/v1` (`/v1/orders`, `/v1/master-skus`…), không có tên service. BFF chuyển `/api/v1/<path>` thành `/v1/<path>`; gateway giữ bảng tiền tố → service trong values ở `gitops` ([ticket 18](../.scratch/architecture-g0-g1/issues/18-gateway-g1.md#answer)).
+- **Timeout ở gateway**: chung cho mọi route, connect 2s, read 10s, quá thì 504 Problem Details. Không retry, không circuit breaker ở G1.
 - **Contract-first**: mỗi service một `openapi/<service>.yaml` trong `contracts`. Không có API nội bộ riêng; F3.3c gọi đúng endpoint công khai "Đặt số tồn".
 - **Lỗi**: Problem Details (RFC 9457) bằng `ProblemDetail` của Spring. Lỗi HTTP chung có `type: about:blank`; lỗi nghiệp vụ có `type: urn:commerce-hub:problem:<code>` kèm extension `code`. Mọi lỗi có `traceId`; lỗi validate có `errors[]`. Danh mục `code` nằm trong `contracts/openapi`.
 - **Phân trang**: keyset, `?cursor=&limit=`, trả `nextCursor` opaque (base64url của JSON `{v:1, k:[…, id]}`, không ký). `limit` mặc định 50, tối đa 200.
@@ -131,7 +133,7 @@ Quyết định: [ADR-0003](../adr/0003-shared-postgres-cluster.md), [ADR-0012](
 - **Secret**: Sealed Secrets trong repo `gitops` ([gitops-argocd.md](../standards/gitops-argocd.md)). Kubeconfig, auth key Tailscale và `.env` không bao giờ vào repo (repo public, [ADR-0006](../adr/0006-public-repos-on-personal-account.md)).
 - **NetworkPolicy theo app**, sinh từ chart `app`: ingress theo danh sách cho phép ở mọi app; app có `HTTPRoute` thì mở thêm nguồn từ pod Envoy của `edge` (8.13). Egress mặc định mở, chỉ siết ở app khai báo `egress.to` (`seller-web`, `gateway`). Gateway chỉ nhận từ `seller-web`; Keycloak được gọi vào `seller-web` cho backchannel logout. Admin API của simulator chạy port riêng để chặn được bằng NetworkPolicy.
 - **Thông tin người mua (N11)**: không có trong log, trace, thông báo lỗi; order che người nhận theo Role ở API. Workspace đi trong baggage, PII thì không ([observability.md](../standards/observability.md)).
-- **Token sàn được mã hóa khi lưu (N11)** ở `channel-connector`. Cách mã hóa (khóa, xoay khóa) **chưa chốt**, nằm trong fog của map cùng chi tiết polling của connector.
+- **Token sàn được mã hóa khi lưu (N11)** ở `channel-connector` bằng Tink AEAD `AES256_GCM`. Mỗi dòng `shop_authorization` có một ciphertext cho cả cặp token, associated data `workspace_id|shop_id|shop_authorization.tokens`, cột `key_id` để đếm. Keyset cleartext trong Sealed Secret (lệch chuẩn vì không có KMS). Xoay khóa hai bước `add-key`/`promote-key`, không cần job mã hóa lại; Shop `Disconnected` bị xóa token ([ADR-0016](../adr/0016-marketplace-token-encryption-with-tink.md)).
 
 ## 8.10 Observability
 
@@ -149,9 +151,9 @@ Hướng instrument trên là đề xuất của [ticket 01](../.scratch/archite
 
 Quyết định: ticket [11](../.scratch/architecture-g0-g1/issues/11-service-template.md#answer), [ADR-0001](../adr/0001-polyrepo.md), [ADR-0006](../adr/0006-public-repos-on-personal-account.md). Checklist: [ci-cd.md](../standards/ci-cd.md), [helm-chart.md](../standards/helm-chart.md), [gitops-argocd.md](../standards/gitops-argocd.md), [container-image.md](../standards/container-image.md), [zero-downtime.md](../standards/zero-downtime.md).
 
-- **Build**: Gradle 9 (Groovy DSL), wrapper và version catalog trong từng repo. Convention plugin `commercehub.spring-service` từ `service-kit`.
-- **Template**: repo `services/hello`, cũng là service "hello" của G0. Chỉ giữ phần mỏng (skeleton package, `application.yaml`, Dockerfile, `settings.gradle`, workflow gọi reusable workflow). Thứ cần đồng bộ về sau đi qua artifact có version: convention plugin, `service-kit`, chart `app`, reusable workflow.
-- **Artifact**: `service-kit` và `contracts` (Maven và npm) publish lên GitHub Packages từ tag `vX.Y.Z`, SemVer. Không repo nào dùng SNAPSHOT của repo khác. Dependabot bump version. Sửa lib cùng service thì dùng composite build.
+- **Build**: Gradle 9 (Groovy DSL), wrapper trong từng repo. Service là project do Spring Initializr sinh, giữ mặc định ([spring-service.md](../standards/spring-service.md), [ADR-0018](../adr/0018-self-contained-services-no-shared-library-yet.md)).
+- **Template**: repo `services/hello`, cũng là service "hello" của G0. Chỉ giữ phần mỏng (skeleton package, `application.yaml`, Dockerfile, `settings.gradle`, workflow gọi reusable workflow). Thứ cần đồng bộ về sau đi qua artifact có version: chart `app`, reusable workflow, `contracts`. Code chung trong template (Problem Details, UUIDv7) được chép khi tạo service, không tự đồng bộ.
+- **Artifact**: `contracts` (Maven và npm) publish lên GitHub Packages từ tag `vX.Y.Z`, SemVer. Không repo nào dùng SNAPSHOT của repo khác. Dependabot bump version.
 - **CI**: GitHub Actions trên GitHub-hosted runner; mỗi repo gọi reusable workflow trong `platform`. Push image lên registry ở `gw` qua `tailscale/github-action`. Workflow cho PR từ fork không nhận secret.
 - **Chart `app`**: một chart cho mọi workload (service Spring, `marketplace-sim`, `seller-web`). Phần JVM dưới `jvm.enabled` (`MaxRAMPercentage`, lab ghi đè 60 cho pod 512 Mi, đo ở G0). Mount trust bundle của lab (8.13). Bật bằng values: port thứ hai, `HTTPRoute` nhiều hostname gắn vào `edge`, Job migrate `PreSync`, Sealed Secret, NetworkPolicy. Mặc định `replicaCount: 2`; values lab đặt 1 ([ADR-0004](../adr/0004-single-instance-by-default-on-homelab.md)).
 - **GitOps**: repo service chỉ tạo image; `gitops` quyết định chạy ở đâu và cấu hình gì. Argo CD kéo chart từ registry và values từ `gitops` (multiple sources). CI cập nhật image tag trong `gitops`.
@@ -164,9 +166,15 @@ Quyết định: ticket [13](../.scratch/architecture-g0-g1/issues/13-dev-loop.m
 - **Config lấy từ `gitops`**: hai container init đọc bản checkout `../gitops` để áp realm `commerce-hub` và tạo topic giống lab. Đây là lệch [ADR-0001](../adr/0001-polyrepo.md) có chủ đích, chỉ ở dev, ghi lý do ở README của compose.
 - **Dữ liệu khởi đầu**: profile `local` của `workspace` tạo idempotent một Account dev, một Workspace, một Member Owner.
 - **Phạm vi trên Mac**: một service cộng các service lân cận trực tiếp. Luồng đầy đủ (simulator → connector → catalog/inventory/order → seller-web) kiểm trên lab sau khi deploy.
-- **Test tích hợp**: Testcontainers chạy cả trên Mac lẫn CI bằng cùng `./gradlew check`; cấu hình nằm ở `service-kit` module `test-support`. Tag image ghim cùng major.minor với production.
+- **Test tích hợp**: Testcontainers chạy cả trên Mac lẫn CI bằng cùng `./gradlew check`; cấu hình nằm trong test của từng service. Tag image ghim cùng major.minor với production, kèm comment trỏ tới version trong `gitops`.
 - **Test chart**: `ct install` chạy trên kind trong job CI, dựng rồi bỏ mỗi lần.
-- **Đã chốt về test**: test N11 ba tầng (8.2); luật ArchUnit (5.2); test chặn route trùng giữa hai dialect của simulator; bộ test tuân thủ của simulator dựng từ ví dụ trong tài liệu Shopee. Chiến lược test G1 còn lại (Pact, nơi chạy e2e, property-based test cho BR-29) nằm trong fog của map.
+- **Chiến lược test G1** (ticket [19](../.scratch/architecture-g0-g1/issues/19-g1-test-strategy.md#answer), có bảng phân tầng đầy đủ): mỗi test đặt ở tầng thấp nhất chứng minh được điều nó cần chứng minh.
+  - **Contract**: không dùng Pact ở G0–G1. Đây là lệch C14 và Charter mục 5 có chủ đích, vì G1 chỉ có một lệnh REST giữa service (F3.3c). REST kiểm bằng `oasdiff breaking` ở CI của `contracts`, cộng test kiểm request/response thật so với OpenAPI ở service. Event kiểm tương thích `BACKWARD`, cộng integration test dùng serde Avro thật với Apicurio. Xem lại Pact khi có REST giữa service mà schema không diễn tả hết.
+  - **Simulator**: bộ test tuân thủ SIM-01..08 nằm trong `marketplace-sim`, fixture chép nguyên văn ví dụ tài liệu Shopee kèm URL và ngày tra. Connector test adapter bằng WireMock dựng từ bản chép riêng, không lấy simulator làm contract. Hai bên chạy thật với nhau chỉ trong e2e.
+  - **e2e**: repo `e2e`, Playwright (TypeScript), chạy trên GitHub-hosted runner vào lab qua Tailscale. Kích hoạt bằng `repository_dispatch` từ `update-gitops`, rồi chờ bằng `argocd app wait` (tài khoản chỉ đọc), cộng lịch hằng đêm. Mỗi lần chạy tạo Account, Workspace, Shop riêng; cuối lần chạy cho token Shop hết hạn trên simulator để Shop thành `Disconnected`. Không tự rollback.
+  - **Không có ở G1**: test tải, chaos (N1–N5 từ G2, N16 từ G4). AC F2.4a "kill pod ở 60%" kiểm ở integration bằng cách dừng worker đột ngột.
+  - **Đã có từ trước**: test N11 ba tầng (8.2); test chặn route trùng giữa hai dialect; jqwik cho BR-29 chạy trên PG thật.
+  - **DoD về test**: mỗi AC có test mang mã; CI xanh ở mọi repo bị đụng; lần e2e đầu tiên sau deploy xanh; metric và trace kiểm tay, link ghi vào ma trận truy vết. Không đặt ngưỡng coverage.
 
 ## 8.13 Cửa vào cụm, PKI và trust
 
@@ -177,3 +185,12 @@ Quyết định: [ADR-0013](../adr/0013-gateway-api-envoy-gateway-shared-edge.md
 - **Trust**: mọi client phải tin root CA của lab. JVM dùng truststore toàn cục do trust-manager sinh, Node dùng `NODE_EXTRA_CA_CERTS`; chart `app` lo mount và đặt biến, code không cấu hình TLS riêng. Mac tin root qua Keychain, runner CI qua store của OS.
 - **DNS và hostname**: `lab.internal` phân giải bằng dnsmasq trên `gw` (Mac qua split DNS của Tailscale, pod qua CoreDNS). Danh sách hostname ở [mục 3.2](03-context-and-scope.md#32-bối-cảnh-kỹ-thuật).
 - **Header chuyển tiếp**: Envoy nối thêm vào `X-Forwarded-For`; số hop tin cậy phải cấu hình và có test giả mạo header cho Keycloak ([keycloak.md](../standards/keycloak.md)).
+
+## 8.14 Đồng bộ với sàn
+
+Chi tiết ở [ADR-0015](../adr/0015-marketplace-sync-as-postgres-work-queue.md) và ticket [17](../.scratch/architecture-g0-g1/issues/17-connector-g1.md#answer).
+
+- **Hàng đợi việc trong Postgres**: bảng `sync_cursor`, mỗi dòng một (Shop, loại việc `ORDER`, `LISTING`, `TOKEN`). Instance nhận việc qua hàm `_lookup` `claim_due_syncs(n)` (`FOR UPDATE SKIP LOCKED`, đặt lease, commit ngay), làm việc trong context Workspace, không giữ transaction lúc gọi sàn. Checkpoint chỉ ghi khi còn giữ lease.
+- **Checkpoint** là `time_to` của cửa sổ đã xong; cửa sổ kế tiếp lùi 10 phút chồng lấn. Dời sau khi cả cửa sổ đã gửi Kafka và có ack. Cửa sổ dài cắt thành đoạn 1 ngày (≤ 15 ngày của Shopee).
+- **Kéo dữ liệu ban đầu và kéo bù (F2.4a)** dùng chung cơ chế: checkpoint `ORDER` khởi đầu ở `now − 30 ngày`; Listing quét toàn bộ lần đầu rồi tăng dần hằng ngày (AS-10).
+- **Làm mới token** là việc `TOKEN` riêng, tới hạn trước 30 phút; việc poll không tự refresh. Lỗi vĩnh viễn thì Shop `Disconnected`. Fencing cho BR-10 để G3.
