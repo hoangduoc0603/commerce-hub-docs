@@ -12,13 +12,16 @@ Ticket có dòng `Hoãn tới:` thì báo chủ repo và hỏi có làm không t
 
 Mở đầu bằng **tổng quan ticket**, viết cho người chưa đọc ticket:
 
+- **Mục đích** (đứng đầu, trước mọi bảng): hai đến ba câu lời thường, chưa dùng thuật ngữ nào chưa giải thích.
+  - Xong ticket thì hệ thống làm được gì mà trước đó chưa làm được. Viết thành kết quả nhìn thấy được, ví dụ "`curl https://hello.lab.internal` trả về từ pod mới", không viết thành danh sách thành phần.
+  - Vị trí của ticket trong mục "Thứ tự làm" của spec: ticket trước đã cho sẵn gì, ticket sau cần gì từ ticket này.
 - **Làm gì**: các phần ticket sẽ dựng, dạng bảng `Phần | Ở đâu (repo, file, object trong cụm) | Vai trò`.
-- **Vì sao**: vấn đề ticket giải quyết, case kỹ thuật nó phục vụ, và ai dùng kết quả (ticket sau, service G1).
+- **Vì sao cần**: vấn đề hoặc rủi ro còn nguyên nếu thiếu ticket này, và case kỹ thuật nó phục vụ.
 - **Nằm ở đâu trong hệ thống**: vị trí của các phần này trong kiến trúc hoặc luồng request, event. Vẽ sơ đồ chữ khi có từ hai thành phần nói chuyện với nhau trở lên.
 - **Không làm gì**: phần đã hoãn hoặc thuộc ticket khác, để khỏi lấn phạm vi.
 - **Học được gì, theo chuẩn nào**: mục tiêu học, mã yêu cầu, ADR, file chuẩn áp dụng, và mức chuẩn của từng artifact (đầy đủ hay tối thiểu, theo mục "Chuẩn production" trong CLAUDE.md).
 
-**Xong khi** chủ repo đọc tổng quan mà trả lời được: ticket dựng những gì, ở đâu, vì sao cần, và xong thì đo bằng gì.
+**Xong khi** chủ repo chỉ đọc phần **Mục đích** mà nói lại được ticket để làm gì. Đọc hết tổng quan thì trả lời được: ticket dựng những gì, ở đâu, vì sao cần, và xong thì đo bằng gì.
 
 ## 2. Lập lộ trình
 

@@ -15,7 +15,7 @@ Tracer bullet của G0: merge vào nhánh mặc định của `hello` thì job `
 
 ## Tiêu chí nghiệm thu
 
-- [ ] Merge một thay đổi trong `hello` → commit mới trong `gitops` có tên service, SHA nguồn, link run → app `Synced/Healthy` → `curl https://hello.lab.internal/...` trả bản mới.
+- [ ] Merge một thay đổi trong `hello` → commit mới trong `gitops` có tên service, SHA nguồn, link run → app `Synced/Healthy` → digest image của pod `hello` khớp digest trong commit `gitops` đó, và `curl https://hello.lab.internal/` qua `edge` nhận 404 JSON do Spring trả (TLS, route và pod đều thông). Sửa 2026-11-15: ở vị trí này `hello` mới là khung, chưa có endpoint nào (API có từ ticket 26, Actuator ở management port không mở qua `edge`); không thêm endpoint tạm vì nó không có trong contract. Từ ticket 27, `curl` gọi API thật.
 - [ ] Merge ba thay đổi gần nhau: ba commit `gitops` tuần tự, không job lỗi (`concurrency` và vòng `pull --rebase`).
 - [ ] CI không có token Argo CD, không gọi `kubectl`.
 - [ ] Rollback bằng `git revert` commit image; đo số giây tới `Healthy` ở bản cũ.
