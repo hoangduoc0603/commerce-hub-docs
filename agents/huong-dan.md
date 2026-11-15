@@ -1,6 +1,6 @@
 # Hướng dẫn làm một ticket (`/huong-dan`)
 
-Pair programming: chủ repo là **driver** (tự code, tự cấu hình, tự chạy lệnh thay đổi hệ thống), Claude là **navigator** (chia bước, giải thích, chỉ nguồn, review). Mục tiêu là chủ repo học được kỹ thuật trong mục `## Mục tiêu học` của ticket, không chỉ là ticket chạy được.
+Pair programming: chủ repo là **driver** (tự code, tự cấu hình, tự chạy lệnh thay đổi hệ thống), Claude là **navigator** (chia bước, giải thích, chỉ nguồn, review). Mục tiêu là chủ repo học được kỹ thuật trong mục `## Mục tiêu học` của ticket, không chỉ là ticket chạy được: chủ repo vừa học vừa làm, nên mỗi thao tác đi kèm cách làm đầy đủ và lý do.
 
 Claude chỉ tự tay làm phần chủ repo giao trong lượt đó ("làm hộ bước 3", "viết giúp test này"), làm đúng phạm vi đó rồi giải thích đã làm gì. Đọc file, chạy test, xem log, `kubectl get` để giải thích hay review thì làm luôn.
 
@@ -8,9 +8,17 @@ Claude chỉ tự tay làm phần chủ repo giao trong lượt đó ("làm hộ
 
 Đọc ticket (người dùng đưa đường dẫn hoặc số), spec của nó, và mọi thứ ticket chạm tới: mã yêu cầu trong [SRS](../requirements/srs.md), ADR liên quan, file `docs/standards/<chủ-đề>.md` của từng artifact sẽ viết (theo mục "Chuẩn production" trong CLAUDE.md), thuật ngữ trong [GLOSSARY](../GLOSSARY.md).
 
-Nếu ticket đã có mục `## Lộ trình`, đây là ticket đang làm dở: tóm tắt các bước đã tick và tiếp tục từ bước đầu tiên chưa tick (sang bước 3).
+Ticket có dòng `Hoãn tới:` thì báo chủ repo và hỏi có làm không trước khi đi tiếp. Nếu ticket đã có mục `## Lộ trình`, đây là ticket đang làm dở: tóm tắt các bước đã tick và tiếp tục từ bước đầu tiên chưa tick (sang bước 3).
 
-**Xong khi** đã nêu cho chủ repo: tiêu đề ticket, mục tiêu học, các mã yêu cầu, ADR và file chuẩn áp dụng.
+Mở đầu bằng **tổng quan ticket**, viết cho người chưa đọc ticket:
+
+- **Làm gì**: các phần ticket sẽ dựng, dạng bảng `Phần | Ở đâu (repo, file, object trong cụm) | Vai trò`.
+- **Vì sao**: vấn đề ticket giải quyết, case kỹ thuật nó phục vụ, và ai dùng kết quả (ticket sau, service G1).
+- **Nằm ở đâu trong hệ thống**: vị trí của các phần này trong kiến trúc hoặc luồng request, event. Vẽ sơ đồ chữ khi có từ hai thành phần nói chuyện với nhau trở lên.
+- **Không làm gì**: phần đã hoãn hoặc thuộc ticket khác, để khỏi lấn phạm vi.
+- **Học được gì, theo chuẩn nào**: mục tiêu học, mã yêu cầu, ADR, file chuẩn áp dụng, và mức chuẩn của từng artifact (đầy đủ hay tối thiểu, theo mục "Chuẩn production" trong CLAUDE.md).
+
+**Xong khi** chủ repo đọc tổng quan mà trả lời được: ticket dựng những gì, ở đâu, vì sao cần, và xong thì đo bằng gì.
 
 ## 2. Lập lộ trình
 
@@ -22,12 +30,25 @@ Trình bày dạng bảng: `# | Làm gì | Vì sao | Kiểm bằng`. Hỏi chủ
 
 ## 3. Đi từng bước
 
-Với mỗi bước, theo thứ tự:
+Mỗi lượt trình bày một bước. Với mỗi bước, theo thứ tự:
 
-1. **Giải thích**: làm gì, vì sao làm vậy, phương án đã loại và lý do. Kèm nguồn chính thức đúng phiên bản (mục checklist trong `docs/standards/`, ADR, hoặc docs gốc). Khái niệm mới thì giải thích ngắn rồi chỉ một nguồn chính để đọc thêm.
-2. **Giao việc**: nói rõ chủ repo cần tạo hay sửa gì, kết quả mong đợi, và lệnh để tự kiểm. Đưa gợi ý và khung; lời giải đầy đủ chỉ khi chủ repo hỏi.
-3. **Chờ** chủ repo báo xong hoặc hỏi. Trả lời câu hỏi bằng cách dẫn tới nguồn và gợi ý.
-4. **Review**: đọc diff, chạy lệnh kiểm, đối chiếu checklist trong `docs/standards/` và ADR. Nhận xét cụ thể: chỗ đúng, chỗ lệch chuẩn và vì sao, cách sửa. Chủ repo tự sửa.
+1. **Tổng quan**: bước này làm gì, để đạt mục đích gì (gắn với tiêu chí nghiệm thu hay rủi ro nào), và thay đổi nằm ở đâu (repo, file, object trong cụm). Vài dòng hoặc một bảng.
+2. **Khái niệm mới**: giải thích từ gốc, ngắn, rồi chỉ một nguồn chính để đọc thêm. Bỏ qua nếu bước không có khái niệm mới.
+3. **Cách làm**: từng thao tác theo thứ tự, mỗi thao tác kèm vì sao.
+   - Thao tác tạo hay sửa file (code, cấu hình, chart, manifest, workflow) có **mẫu đầy đủ**: chạy được với phiên bản đang dùng, comment giải thích mọi dòng không hiển nhiên (trường này làm gì, vì sao chọn giá trị này, bỏ đi thì sao). Đánh dấu rõ chỗ chủ repo phải tự điền hay tự quyết.
+   - Bước có code theo nhịp red → green: mẫu test trước, chạy thấy đỏ, rồi mới tới mẫu code.
+   - Lệnh chạy có kèm output mong đợi, hoặc dòng cần nhìn trong output.
+   - Mẫu là thứ chủ repo đọc hiểu rồi tự gõ vào repo, không phải Claude ghi file hộ. Trước khi đưa mẫu, kiểm cú pháp và tên trường với docs đúng phiên bản (context7 hoặc trang chính thức); chỗ chưa kiểm được thì gắn nhãn **chưa xác minh**.
+   - Artifact mức tối thiểu vẫn có mẫu và lý do, chỉ bớt phần so sánh phương án.
+4. **Phương án đã loại** và lý do.
+5. **Nguồn** chính thức đúng phiên bản: mục checklist trong `docs/standards/`, ADR, hoặc docs gốc.
+6. **Tự kiểm**: lệnh kiểm của bước và kết quả mong đợi.
+
+Rồi:
+
+- **Chờ** chủ repo báo xong hoặc hỏi. Trả lời câu hỏi bằng giải thích và ví dụ, kèm nguồn.
+- **Review**: đọc diff, chạy lệnh kiểm, đối chiếu checklist trong `docs/standards/` và ADR. Nhận xét cụ thể: chỗ đúng, chỗ lệch chuẩn và vì sao, cách sửa. Chủ repo tự sửa.
+- Bước chủ repo giao Claude làm hộ: báo kết quả theo cùng thứ tự trên, mở bằng tổng quan.
 
 **Xong bước khi** lệnh kiểm của bước đó pass và chủ repo đồng ý. Tick bước trong `## Lộ trình`.
 
