@@ -60,6 +60,7 @@ Repo `libs/service-kit` nhiều module, một version, với hai module đầu: 
 - `libs/service-kit` (`commerce-hub-service-kit`) từ `06ee97e` tới `6e7d399`, tag `v0.1.0`: module `test-support` (luật hexagonal, Testcontainers PostgreSQL 18.7, bảng tag image), module `gradle-plugin` (convention plugin `commercehub.spring-service`), included build `build-logic` (plugin publish nội bộ), `ci.yml`.
 - `platform` từ `5f9e1ce` tới `8127401`: reusable workflow `java-library.yml`, README mục "Reusable workflow", cờ `--release-tags` cho `repo-bootstrap.sh` và `repo-audit.sh`.
 - GitHub Packages: `gradle-plugin`, `test-support` và marker `commercehub.spring-service` version `0.1.0`, public.
+- `v0.1.1` (tag trên `77094ce`, run 43730338109): mang sửa 2–3 của review. Bước kiểm mới của job `publish` chạy thật lần đầu: `Commit 77094ce… nằm trên main (identical)`; `check` 79 s, `publish` 69 s; ba package có `0.1.1` và `0.1.0`. Template `hello` (ticket 23) bắt đầu từ `0.1.1`.
 - Chuẩn: [java-library.md](../../../standards/java-library.md) hết điểm "chưa xác minh" của ticket này (marker, 409, `--include-build`, version qua resource, JUnit 6.1.3); còn một điểm thuộc ticket `hello` (Dependabot tự truy cập GitHub Packages).
 - Ma trận truy vết: không có dòng cho ticket nền tảng G0 (bảng theo mã F và NFR), nên không sửa. Luật hexagonal là công cụ giữ N13 ("thêm sàn mới không sửa lõi") từ G1.
 
