@@ -28,7 +28,7 @@ kubectl create secret generic <tên> -n <namespace> \
 
 - **Đặt đúng namespace và tên ngay từ đầu.** Muốn đổi một trong hai thì phải seal lại.
 - **Giá trị nhạy cảm nên đọc từ file hoặc stdin** (`--from-file=key=/dev/stdin`), thay vì ghi trong dòng lệnh, để không lọt vào history của shell.
-- **Trong app Argo CD**, SealedSecret mang annotation `argocd.argoproj.io/sync-wave: "-1"`, để Secret có trước workload ([gitops-argocd.md, mục "Sync waves"](../standards/gitops-argocd.md)).
+- **Trong app Argo CD**, SealedSecret mang annotation `argocd.argoproj.io/sync-wave: "-1"`, để Secret có trước workload ([gitops-argocd.md, mục "Sync waves"](../standards/gitops-argocd.md)). Ngoại lệ: Secret mật khẩu role trong app `pg-main` ở wave `1` (sau `Cluster` ở wave 0, trước `DatabaseRole` ở wave 2), theo [postgres-cnpg.md](../standards/postgres-cnpg.md) và [runbook thêm service](pg-main-them-service.md).
 - **Nếu bắt buộc phải có file Secret dạng rõ trung gian**, đặt tên theo mẫu `*.plain.yaml`, `*.unsealed.yaml` hoặc `*-secret.yaml`. Các mẫu này đã nằm trong `.gitignore` của `gitops`.
 - **Trước khi push**, chạy `scripts/check-no-plain-secrets.sh` trong `gitops`: phải in `OK`.
 

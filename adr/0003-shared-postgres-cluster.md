@@ -21,3 +21,4 @@ Mọi service có DB (workspace, channel-connector, catalog, inventory, order), 
 ## Ghi chú
 
 - 2026-11-13: Đổi tên service `tenant` thành `workspace` theo GLOSSARY ([ticket 09](../.scratch/architecture-g0-g1/issues/09-g1-contracts.md#answer), Q24). Quyết định không đổi.
+- 2026-11-15: Khi dựng ở [G0-08](../.scratch/g0-platform/issues/08-pg-main.md), CR `Database` của CloudNativePG không quản lý quyền nên `REVOKE CONNECT, TEMPORARY ... FROM PUBLIC` đổi cách làm: CONNECT chéo database chặn bằng `pg_hba` theo database × role kết thúc bằng `reject` (quyết định A, đã kiểm cả khi đi qua Pooler); TEMPORARY chuyển thành mục cân nhắc trong migration đầu của từng service ([db-migration.md](../standards/db-migration.md)). Quyết định dùng chung cụm, database và role riêng không đổi.
