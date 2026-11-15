@@ -65,11 +65,11 @@ Repo `libs/service-kit` nhiều module, một version, với hai module đầu: 
 
 ## Review
 
-`code-review` (mức high) trên toàn bộ `service-kit` và phần thay đổi của `platform`, 7 phát hiện, chưa sửa (chủ repo quyết):
+`code-review` (mức high) trên toàn bộ `service-kit` và phần thay đổi của `platform`, 7 phát hiện. Chủ repo chọn sửa 1–3 (đã sửa, xem dưới); 4–7 để lại:
 
-1. `java-library.yml`: `publish` chạy với mọi tag `v*`, không kiểm commit của tag nằm trên `main`.
-2. `commercehub.kit-publishing.gradle`: `pom.description` đọc `project.description` lúc tạo publication, phụ thuộc thứ tự dòng trong module.
-3. `commercehub.spring-service.gradle`: không kiểm `null` khi đọc `commercehub-kit.properties`.
+1. **Đã sửa** (platform `f836c28`, `service-kit` ghim lại ở `77094ce`): `java-library.yml`: `publish` chạy với mọi tag `v*`, không kiểm commit của tag nằm trên `main`. Thêm bước gọi API compare, chỉ đi tiếp khi `identical` hoặc `behind`; đã thử `identical` (6e7d399), `behind` (06ee97e) và `diverged` (nhánh chưa merge của `actions/checkout`, thoát 1).
+2. **Đã sửa** (`service-kit` `0e17254`): `commercehub.kit-publishing.gradle`: `pom.description` đọc `project.description` lúc tạo publication, phụ thuộc thứ tự dòng trong module. Đã tái hiện (POM mất `<description>`), sửa bằng `providers.provider`, configuration cache vẫn lưu và dùng lại.
+3. **Đã sửa** (`service-kit` `0e17254`): `commercehub.spring-service.gradle`: không kiểm `null` khi đọc `commercehub-kit.properties`. Đã tái hiện (NPE), giờ ném `GradleException` nêu tên file và task. Hai sửa 2–3 có hiệu lực cho service từ bản phát hành sau `0.1.0`.
 4. `HexagonalRules.ADAPTERS_INDEPENDENT`: cấm `adapter.in.kafka` và `adapter.out.kafka` dùng chung code (serde, cấu hình Avro).
 5. `gradle-plugin/build.gradle`: test phụ thuộc publish đầy đủ (sources, javadoc) của `test-support`.
 6. `ServiceProject`: chèn đường dẫn repo vào chuỗi Groovy không escape.
