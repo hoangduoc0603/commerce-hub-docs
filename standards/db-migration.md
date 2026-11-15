@@ -109,8 +109,8 @@ Quyết định ở [ADR-0010](../adr/0010-workspace-isolation-shared-schema-wit
 | PreSync chặn deploy | Đẩy migration lỗi cố ý | Job `Failed`, Deployment giữ bản cũ, app báo sync lỗi |
 | Rollback | Deploy N (có expand) → `git revert` về N-1 trong lúc chạy tải | 0 request lỗi (cách đo ở [`zero-downtime.md`](zero-downtime.md)) |
 | Tách quyền | Đăng nhập `<svc>_app`: `CREATE TABLE x()`; `SELECT` khi chưa đặt Workspace | `permission denied`; 0 hàng |
-| Cô lập Workspace, tầng catalog (N11) | Test dùng chung trong test-fixtures của `libs/workspace-access`, chạy sau Flyway: bảng có `workspace_id` đủ `ENABLE`/`FORCE`/policy đúng mẫu; bảng khác nằm trong danh sách cho phép; FK ghép đủ; hàm `SECURITY DEFINER` thuộc `_lookup`; `_app` không phải owner, không `BYPASSRLS` | 0 vi phạm ở mọi service |
-| Cô lập Workspace, tầng hành vi (N11) | Test trong lib, đi qua container PgBouncer `transaction`: A rồi B trên cùng server connection; truy vấn ngoài transaction; thiếu context; insert sai Workspace | B thấy 0 dòng của A; 0 dòng; exception; `WITH CHECK` từ chối |
+| Cô lập Workspace, tầng catalog (N11) | Test ~~dùng chung trong test-fixtures của `libs/workspace-access`~~ trong service (sửa 2026-11-15, [ADR-0018](../adr/0018-self-contained-services-no-shared-library-yet.md); làm ở G1 cùng ticket G0-25), chạy sau Flyway: bảng có `workspace_id` đủ `ENABLE`/`FORCE`/policy đúng mẫu; bảng khác nằm trong danh sách cho phép; FK ghép đủ; hàm `SECURITY DEFINER` thuộc `_lookup`; `_app` không phải owner, không `BYPASSRLS` | 0 vi phạm ở mọi service |
+| Cô lập Workspace, tầng hành vi (N11) | Test ~~trong lib~~ trong service (sửa 2026-11-15, G1), đi qua container PgBouncer `transaction`: A rồi B trên cùng server connection; truy vấn ngoài transaction; thiếu context; insert sai Workspace | B thấy 0 dòng của A; 0 dòng; exception; `WITH CHECK` từ chối |
 | Owner đúng | `\dt+` và `\dp` sau migration | Bảng thuộc `<svc>_owner`, `<svc>_app` có đúng quyền DML |
 
 Kết quả ghi vào `docs/experiments/`.

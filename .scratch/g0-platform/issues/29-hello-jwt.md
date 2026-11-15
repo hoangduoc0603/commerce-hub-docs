@@ -2,12 +2,12 @@
 
 Status: ready-for-human
 Blocked by: 11, 27, 28
-Repos: services/hello, libs/service-kit, gitops, docs
+Repos: services/hello, gitops, docs (bỏ `libs/service-kit` ngày 2026-11-15)
 Spec: [G0](../spec.md)
 
 ## Mô tả
 
-Mọi route của `hello` bắt buộc JWT của realm `commerce-hub`: chỉ RS256, `audiences: commerce-hub-api`, validator mặc định (`iss`, `exp`, `nbf`). Thiếu hoặc sai token thì trả 401 Problem Details có `traceId` (entry point trong module `web`). Trên lab, `hello` tin issuer `https://auth.lab.internal` nhờ truststore của chart, không sửa code. Theo mục "Resource server" của [keycloak.md](../../../standards/keycloak.md).
+Mọi route của `hello` bắt buộc JWT của realm `commerce-hub`: chỉ RS256, `audiences: commerce-hub-api`, validator mặc định (`iss`, `exp`, `nbf`). Thiếu hoặc sai token thì trả 401 Problem Details có `traceId` (entry point ~~trong module `web`~~ viết trong `hello`, sửa 2026-11-15 theo [ADR-0018](../../../adr/0018-self-contained-services-no-shared-library-yet.md)). Trên lab, `hello` tin issuer `https://auth.lab.internal` nhờ truststore của chart, không sửa code. Theo mục "Resource server" của [keycloak.md](../../../standards/keycloak.md).
 
 ## Mục tiêu học
 

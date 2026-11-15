@@ -1,6 +1,7 @@
 # 18: `service-kit` v0.1: convention plugin, ArchUnit, publish từ tag
 
 Status: resolved
+Ghi chú 2026-11-15: thôi dùng `service-kit` ([ADR-0018](../../../adr/0018-self-contained-services-no-shared-library-yet.md)). Ticket giữ làm lịch sử; repo `commerce-hub-service-kit` đã archive, workflow `java-library.yml` của `platform` đã xóa.
 Blocked by: 01
 Repos: libs/service-kit, platform, docs
 Spec: [G0](../spec.md)

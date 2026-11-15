@@ -6,7 +6,7 @@ commerce-hub là SaaS quản lý bán hàng đa sàn cho nhà bán trên TikTok 
 
 **Giai đoạn 0, Nền tảng.** Chưa có yêu cầu chức năng. Đầu ra là:
 - cụm home lab chạy Argo CD, PostgreSQL, Kafka, Schema Registry, Keycloak và LGTM;
-- repo `docs`, `contracts`, `platform`, `gitops`, `libs/service-kit`;
+- repo `docs`, `contracts`, `platform`, `gitops` (`libs/service-kit` bỏ từ 2026-11-15, [ADR-0018](../adr/0018-self-contained-services-no-shared-library-yet.md));
 - service `hello` (cũng là template service) có trace và dashboard (khung của N12).
 
 **Giai đoạn 1, Lõi đồng bộ.** Kết thúc khi đơn tạo trên simulator hiện trên giao diện. Yêu cầu thuộc G1 theo [ma trận truy vết](../requirements/traceability.md):

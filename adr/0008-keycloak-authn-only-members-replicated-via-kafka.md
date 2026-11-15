@@ -7,7 +7,7 @@ date: 2026-11-13
 
 Keycloak dùng **một realm** `commerce-hub` và chỉ trả lời câu hỏi "Account nào". Token chỉ mang `sub`, email và `email_verified`. Mọi thứ về Workspace (Member, Role, Scope) nằm ở service `workspace`. Workspace đang làm việc không nằm trong token mà đi theo từng request bằng header `X-Workspace-Id`. Vì vậy chuyển Workspace (F1.1c) không phải đổi token.
 
-`workspace` phát trạng thái đầy đủ của từng Member lên một topic Kafka **compacted**. Gỡ Member thì phát tombstone. Mỗi service đọc toàn bộ topic vào bộ nhớ qua thư viện chung `libs/workspace-access`. Thư viện tự gán mọi partition, không dùng consumer group, và đọc lại từ đầu mỗi lần khởi động. Từ `sub` và `X-Workspace-Id`, thư viện dựng ra `MemberContext` (các Role và Scope), và service tự kiểm quyền trên chính tài nguyên của mình. Gateway chỉ kiểm JWT và định tuyến.
+`workspace` phát trạng thái đầy đủ của từng Member lên một topic Kafka **compacted**. Gỡ Member thì phát tombstone. Mỗi service đọc toàn bộ topic vào bộ nhớ qua thư viện chung `libs/workspace-access` (**sửa 2026-11-15:** chưa có thư viện dùng chung; code này nằm trong service, chép hay tách thư viện quyết ở G1, xem [ADR-0018](0018-self-contained-services-no-shared-library-yet.md). "Thư viện" ở các đoạn dưới đọc là phần code đó). Thư viện tự gán mọi partition, không dùng consumer group, và đọc lại từ đầu mỗi lần khởi động. Từ `sub` và `X-Workspace-Id`, thư viện dựng ra `MemberContext` (các Role và Scope), và service tự kiểm quyền trên chính tài nguyên của mình. Gateway chỉ kiểm JWT và định tuyến.
 
 Lý do là BR-07: thu hồi quyền phải có hiệu lực trong 5 giây, không chờ token hết hạn. Hướng này còn giữ được quyết định của [08 Giao tiếp giữa service ở G1](../.scratch/architecture-g0-g1/issues/08-g1-communication.md): không có REST đọc đồng bộ giữa service, nên `workspace` không nằm trên đường xử lý của mọi request. Bối cảnh ở ticket [05 Mô hình danh tính và Workspace trong token](../.scratch/architecture-g0-g1/issues/05-identity-model.md).
 
@@ -33,3 +33,4 @@ Lý do là BR-07: thu hồi quyền phải có hiệu lực trong 5 giây, khôn
 ## Ghi chú
 
 - 2026-11-13: Đổi tên service `tenant` thành `workspace` theo GLOSSARY ([ticket 09](../.scratch/architecture-g0-g1/issues/09-g1-contracts.md#answer), Q24). Quyết định không đổi.
+- 2026-11-15: Bỏ thư viện dùng chung ([ADR-0018](0018-self-contained-services-no-shared-library-yet.md)). Quyết định không đổi. Lý do ở hệ quả "sửa quyền không buộc mọi service lên phiên bản thư viện mới" chỉ còn đúng nếu G1 tách thư viện; nếu chép code thì mỗi service tự giữ bảng quyền như cũ.

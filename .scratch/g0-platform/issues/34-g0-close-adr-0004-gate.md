@@ -1,7 +1,7 @@
 # 34: Cổng ADR-0004 và đóng G0
 
 Status: ready-for-human
-Blocked by: 16, 20, 29, 30, 32
+Blocked by: 29, 30, 32 (bỏ 16, 20 ngày 2026-11-15: Kafka, Apicurio, contract Avro sang đầu G1, spec G0 mục "Sửa phạm vi 2026-11-15")
 Repos: docs, gitops
 Spec: [G0](../spec.md)
 
@@ -34,12 +34,12 @@ Tiêu chí hoãn tới G7:
   - [ ] Merge vào `hello` → CI push image lên GHCR → commit trong `gitops` → app `Synced/Healthy`.
   - [ ] Qua `https://hello.lab.internal`: không token trả 401 Problem Details; token client credentials của realm `commerce-hub` tạo được lời chào.
   - [ ] Request đó có trace trên Tempo (span HTTP server và span DB), log trên Loki, metric và dashboard "Service overview" có dữ liệu.
-  - [ ] Kafka 3 broker và Apicurio `Ready`; pipeline Avro của `contracts` chặn thay đổi phá vỡ (bằng chứng từ ticket 20).
+  - ~~Kafka 3 broker và Apicurio `Ready`; pipeline Avro của `contracts` chặn thay đổi phá vỡ (bằng chứng từ ticket 20).~~ Sang đầu G1 cùng ticket 15, 16, 20.
   - [ ] Vòng dev bằng `platform/compose` chạy được (bằng chứng từ ticket 32).
 - [ ] `kubectl top pod -A` đo một lần, theo nhóm của bảng ngân sách; không pod nào OOMKilled lúc đo.
 - [ ] RSS của `hello` dưới 90% limit (NMT summary); chốt `MaxRAMPercentage` cho G1.
-- [ ] Quyết định giữ hay sửa ADR-0004, có số đo đi kèm.
-- [ ] Các điểm **chưa xác minh** phải đóng ở G0 đã có kết quả trong `docs/standards/` (đã xác minh, hoặc lệch chuẩn có lý do): RSS `hello` (ticket này); span JDBC với Spring Boot 4.1 (30); `nullif` với `''` (25); đọc package GitHub Packages chéo repo bằng `GITHUB_TOKEN` (19); chart monolithic của Tempo (14); UI Apicurio tắt được không (16); package GHCR của repo public có tự public không (17, [ADR-0017](../../../adr/0017-images-and-charts-on-ghcr.md)).
+- [ ] Ghi số đo so với bảng ADR-0004, nói rõ thiếu Kafka. Quyết định giữ hay sửa ADR-0004 dời tới lúc Kafka lên ở đầu G1 (sửa 2026-11-15).
+- [ ] Các điểm **chưa xác minh** phải đóng ở G0 đã có kết quả trong `docs/standards/` (đã xác minh, hoặc lệch chuẩn có lý do): RSS `hello` (ticket này); span JDBC với Spring Boot 4.1 (30); ~~`nullif` với `''` (25)~~ sang G1 cùng ticket 25 (2026-11-15); đọc package GitHub Packages chéo repo bằng `GITHUB_TOKEN` (19); chart monolithic của Tempo (14); package GHCR của repo public có tự public không (17, [ADR-0017](../../../adr/0017-images-and-charts-on-ghcr.md)). UI Apicurio tắt được không (16) sang G1.
 - [ ] arc42 mục 7 (deployment view) và mục 9 cập nhật; runbook bootstrap, khóa sealing, thêm service, admin realm đầy đủ.
 - [ ] Bản ghi thí nghiệm G0 trong `docs/experiments/` link tới các bản ghi theo chủ đề.
 - [ ] Dòng "Phase hiện tại" trong CLAUDE.md và ma trận truy vết phản ánh G0 xong.

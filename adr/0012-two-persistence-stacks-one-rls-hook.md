@@ -7,9 +7,9 @@ date: 2026-11-13
 
 Service có thao tác khó dùng **`JdbcClient` với SQL viết tay**: inventory (khóa `FOR UPDATE` theo thứ tự, số dư và sổ cái), order (upsert có điều kiện version ở ba luồng), channel-connector (token, checkpoint). Service CRUD dùng **Spring Data JPA/Hibernate**: workspace, catalog, marketplace-sim. Riêng catalog viết upsert có version guard của `ChannelListingSynced` bằng `@Query(nativeQuery = true)`.
 
-Cả hai đường đặt Workspace cho RLS ([ADR-0010](0010-workspace-isolation-shared-schema-with-mandatory-rls.md)) ở **cùng một điểm**: một `TransactionExecutionListener` (Spring Framework 6.1+) trong `libs/service-kit` module `workspace-access`. Ở `afterBegin`, listener lấy connection đang gắn với transaction qua `DataSourceUtils`, rồi chạy `set_config('app.workspace_id', ?, true)`. Listener chạy cho cả `DataSourceTransactionManager` lẫn `JpaTransactionManager`, vì `JpaTransactionManager` gắn JDBC connection vào `DataSource` ngay lúc begin.
+Cả hai đường đặt Workspace cho RLS ([ADR-0010](0010-workspace-isolation-shared-schema-with-mandatory-rls.md)) ở **cùng một điểm**: một `TransactionExecutionListener` (Spring Framework 6.1+) trong `libs/service-kit` module `workspace-access` (**sửa 2026-11-15:** chưa có thư viện dùng chung; hook viết trong service đầu tiên có bảng theo Workspace ở Giai đoạn 1, xem [ADR-0018](0018-self-contained-services-no-shared-library-yet.md)). Ở `afterBegin`, listener lấy connection đang gắn với transaction qua `DataSourceUtils`, rồi chạy `set_config('app.workspace_id', ?, true)`. Listener chạy cho cả `DataSourceTransactionManager` lẫn `JpaTransactionManager`, vì `JpaTransactionManager` gắn JDBC connection vào `DataSource` ngay lúc begin.
 
-Service JPA bắt buộc ba điều sau, và test của `service-kit` kiểm chúng:
+Service JPA bắt buộc ba điều sau, và test của `service-kit` kiểm chúng (**sửa 2026-11-15:** test của chính service JPA kiểm, [ADR-0018](0018-self-contained-services-no-shared-library-yet.md)):
 - `spring.jpa.open-in-view=false`;
 - không bật second-level cache, vì cache dùng chung giữa các Workspace mà RLS không che được;
 - `spring.jpa.hibernate.ddl-auto=validate`, vì Flyway sở hữu schema.
@@ -25,7 +25,7 @@ Bối cảnh ở ticket [11 Template service Spring Boot](../.scratch/architectu
 
 ## Hệ quả
 
-- Có hai cách viết tầng persistence. Người đọc code phải biết service đang thuộc loại nào. Template `services/hello` minh họa cả hai.
-- Với service JPA, ArchUnit cho phép annotation `jakarta.persistence.*` nằm trong `domain`, để khỏi nhân đôi class. Spring và adapter vẫn bị cấm trong `domain`.
+- Có hai cách viết tầng persistence. Người đọc code phải biết service đang thuộc loại nào. Template `services/hello` minh họa cả hai (**sửa 2026-11-15:** `hello` ở G0 chỉ có `JdbcClient` và bảng toàn cục; mẫu JPA có ở service JPA đầu tiên của G1).
+- Với service JPA, ArchUnit cho phép annotation `jakarta.persistence.*` nằm trong `domain`, để khỏi nhân đôi class. Spring và adapter vẫn bị cấm trong `domain` (**sửa 2026-11-15:** không có ArchUnit, layout hexagonal là quy ước, [ADR-0018](0018-self-contained-services-no-shared-library-yet.md); quy ước về `jakarta.persistence.*` giữ nguyên).
 - **Chưa xác minh**: với Hibernate 7 trong Spring Boot 4.1, connection đã gắn với `DataSource` lúc `afterBegin` hay chưa. Test hành vi N11 chạy qua PgBouncer `transaction` (ticket 06) phải chạy với **cả** một service JPA lẫn một service `JdbcClient`. Nếu không đạt thì JPA cần một lớp con `JpaTransactionManager`, và ADR này phải sửa.
 - Đổi công nghệ của một service về sau nghĩa là viết lại adapter persistence của service đó. Domain và hook giữ nguyên.

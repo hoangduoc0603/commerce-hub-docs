@@ -1,5 +1,10 @@
 # Chuẩn: Thư viện Java dùng chung (Gradle convention plugin, publish Maven, luật kiến trúc)
 
+> **Phạm vi từ 2026-11-15** ([ADR-0018](../adr/0018-self-contained-services-no-shared-library-yet.md)): dự án thôi dùng `libs/service-kit` và chưa có thư viện dùng chung. Repo `commerce-hub-service-kit` đã archive, reusable workflow `java-library.yml` đã xóa khỏi `platform`.
+>
+> - **Còn áp dụng** cho artifact Maven của `contracts` (ticket 19, 20): mục "Version, publish, bất biến" (version từ tag, ruleset khóa tag `v*`, publish chỉ từ commit trên nhánh mặc định, 409 khi publish lại), cùng các dòng tương ứng của bảng "Bằng chứng cần có". Workflow publish của `contracts` viết lại ở ticket 19; mã cũ của `java-library.yml` nằm trong history của `platform` (commit `f836c28`).
+> - **Lịch sử, không áp dụng:** cấu trúc repo nhiều module, convention plugin, composite build, luật kiến trúc (`test-support`), Testcontainers và bảng tag image, phía consumer, CI của lib. Build của service theo [`spring-service.md`](spring-service.md). Giữ nguyên văn để dùng lại nếu G1 xét lại việc tách thư viện.
+
 Artifact **mức đầy đủ** (CLAUDE.md, mục Chuẩn production): code dùng chung của mọi service backend. Phần workflow CI của lib theo [`ci-cd.md`](ci-cd.md) (mức tối thiểu).
 
 - Ngày tra: 2026-11-15

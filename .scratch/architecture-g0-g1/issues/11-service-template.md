@@ -4,6 +4,7 @@ Type: grilling
 Status: resolved
 Blocked by: 01, 02
 Map: [Kiến trúc G0–G1](../map.md)
+Ghi chú 2026-11-15: phần `libs/service-kit` (convention plugin, ArchUnit, module dùng chung, GitHub Packages) bị thay bởi [ADR-0018](../../../adr/0018-self-contained-services-no-shared-library-yet.md): service là project Spring Initializr bình thường, chưa có thư viện dùng chung, layout hexagonal là quy ước. Phần còn lại của ticket (Gradle, virtual thread, JdbcClient/JPA, hexagonal, profile) giữ nguyên. Nội dung dưới đây là bản ghi lúc chốt.
 
 ## Question
 
@@ -121,3 +122,4 @@ Chốt ngày 2026-11-13 (người dùng), sau hai vòng grilling (Q1–Q20). Quy
 - 2026-11-13: Từ ticket [09 Contract và canonical model của G1](09-g1-contracts.md#answer): `libs` cần (1) sinh UUIDv7 cho ID nội bộ và `eventId`; (2) UUIDv5 tất định chỉ dùng trong connector, nhưng namespace và cách nối chuỗi cố định trong `contracts`, kèm test giá trị mẫu ([ADR-0009](../../../adr/0009-deterministic-ids-for-marketplace-entities.md)); (3) envelope event `eventId`, `occurredAt`, `workspaceId`, `traceparent` trong header; (4) quy ước REST: `?cursor=&limit=` trả `nextCursor` opaque, header `Idempotency-Key`, `ETag`/`If-Match` → `412`, mô hình lỗi Problem Details (RFC 9457) chốt ở ticket này. Key Kafka là chuỗi (`StringSerializer`).
 - 2026-11-13: Từ ticket [07 Frontend truy cập API](07-frontend-access.md#answer): `seller-web` là Node (Next.js 16, `output: 'standalone'`), không dùng template Spring Boot, nhưng chart cần ba thứ giống service: Job Flyway ở `PreSync` cho DB `seller_web` (role `_owner`/`_migrator`/`_app`, không `_lookup`), Sealed Secret chứa client secret và khóa AES-GCM của phiên (có `key_id` để xoay), và NetworkPolicy cho chiều Keycloak → seller-web (backchannel logout) và seller-web → gateway. Service nhận `traceparent` do BFF gửi ([ADR-0011](../../../adr/0011-nextjs-bff-with-server-side-session.md)).
 - 2026-11-13: Sửa theo ticket [16](16-cluster-entry.md#answer): Ingress → HTTPRoute, trust bundle (ADR-0013, ADR-0014).
+- 2026-11-13: Từ ticket [18 Gateway ở G1](18-gateway-g1.md#answer): gateway là Spring Cloud Gateway **Server MVC** chạy virtual thread, sinh từ template `hello` nhưng bỏ persistence, Kafka và hook RLS; vẫn dùng `service-kit` và chart `app`. Không rate limit ở G1. Timeout chung `spring.http.clients.*` (connect 2s, read 10s), quá timeout trả 504 Problem Details.

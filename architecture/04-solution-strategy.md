@@ -31,7 +31,7 @@ Cái giá đã chấp nhận:
 
 - **RAM.** 6 service × 512 Mi JVM, cộng simulator và frontend, là khoảng 4,6 GiB trên cụm 24 GiB. Vừa được nhờ chạy 1 instance ([ADR-0004](../adr/0004-single-instance-by-default-on-homelab.md)). JVM 512 Mi là rủi ro lớn nhất, phải đo ở G0.
 - **Nhất quán cuối cùng.** Ví dụ: ngay sau khi tạo Workspace, service khác có thể chưa thấy Member. Màn hình đầu của Workspace mới đọc từ `workspace`, test e2e poll chờ thay vì `sleep` ([ADR-0008](../adr/0008-keycloak-authn-only-members-replicated-via-kafka.md)).
-- **Lặp cấu hình ở nhiều repo.** Bù bằng template `services/hello`, `libs/service-kit`, chart `app` và reusable workflow ([mục 8.11](08-crosscutting-concepts.md#811-build-artifact-và-triển-khai)).
+- **Lặp cấu hình ở nhiều repo.** Bù bằng template `services/hello`, chart `app` và reusable workflow. Chưa có thư viện dùng chung: code chung được chép khi sinh service từ template, chấp nhận trôi lệch tới khi có service thứ hai cần đúng cùng một đoạn code ([ADR-0018](../adr/0018-self-contained-services-no-shared-library-yet.md)) ([mục 8.11](08-crosscutting-concepts.md#811-build-artifact-và-triển-khai)).
 - **Không còn "tách khi có số đo".** Thay vào đó, mỗi giai đoạn vẫn phải có bản ghi thí nghiệm. Nếu số đo cho thấy một ranh giới sai, gộp lại là một quyết định mới có ADR.
 
 ## 4.3 Cách đạt mục tiêu chất lượng

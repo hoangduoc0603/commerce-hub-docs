@@ -7,7 +7,7 @@ Spec: [G0](../spec.md)
 
 ## Mô tả
 
-`platform/compose` dựng trên Mac: Kafka KRaft 1 broker, Apicurio 3, PostgreSQL 18 (database và bốn role cho `hello`), PgBouncer `transaction`, Keycloak. Hai init đọc bản checkout `../gitops`: keycloak-config-cli áp realm, `yq` đọc CR `KafkaTopic` (G0 chưa có topic). Có `.env.example` và profile `obs` chạy `grafana/otel-lgtm`. `hello` chạy trên host với profile `local`. README ghi lệch ADR-0001 chỉ ở dev. Thêm một job theo lịch trong `platform` so major.minor của PostgreSQL, Kafka, Keycloak, Apicurio giữa `gitops`, compose và bảng tag của `service-kit`. Theo ticket 13 của map.
+`platform/compose` dựng trên Mac: Kafka KRaft 1 broker, Apicurio 3, PostgreSQL 18 (database và bốn role cho `hello`), PgBouncer `transaction`, Keycloak. Hai init đọc bản checkout `../gitops`: keycloak-config-cli áp realm, `yq` đọc CR `KafkaTopic` (G0 chưa có topic). Có `.env.example` và profile `obs` chạy `grafana/otel-lgtm`. `hello` chạy trên host với profile `local`. README ghi lệch ADR-0001 chỉ ở dev. Thêm một job theo lịch trong `platform` so major.minor của PostgreSQL, Kafka, Keycloak, Apicurio giữa `gitops`, compose ~~và bảng tag của `service-kit`~~ (sửa 2026-11-15: không còn bảng tag dùng chung, [ADR-0018](../../../adr/0018-self-contained-services-no-shared-library-yet.md); tag Testcontainers ghim trong test của từng service, quét chúng xét lại ở G1). Theo ticket 13 của map.
 
 ## Mục tiêu học
 

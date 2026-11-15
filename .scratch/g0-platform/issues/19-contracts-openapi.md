@@ -9,6 +9,10 @@ Spec: [G0](../spec.md)
 
 `contracts` chứa OpenAPI của `hello` (tạo lời chào từ `name` 1–50 ký tự trả 201 với ID và `Location`; đọc theo ID trả 200 hoặc 404; tiền tố `/v1`; bảo mật bearer JWT) và schema `Problem` dùng chung (RFC 9457, `traceId`, `errors[]`, danh mục `code` còn rỗng). Reusable workflow `contracts`: lint → `oasdiff breaking` so với tag trước → sinh code bằng `org.openapi.generator` → publish Maven và npm lên GitHub Packages chỉ từ tag. Theo ticket 11, 19 của map và [ci-cd.md](../../../standards/ci-cd.md).
 
+## Sửa 2026-11-15 (bỏ `service-kit`)
+
+Reusable workflow `java-library.yml` của `platform` (viết ở ticket 18 để publish Maven từ tag) đã xóa cùng `service-kit` ([ADR-0018](../../../adr/0018-self-contained-services-no-shared-library-yet.md)). Bước publish Maven của `contracts` viết trong workflow của ticket này; phần version, publish, bất biến của [java-library.md](../../../standards/java-library.md) vẫn áp dụng, mã cũ của `java-library.yml` xem trong history của `platform` (commit `f836c28`).
+
 ## Mục tiêu học
 
 - Contract-first: OpenAPI là nguồn, code sinh ra, thay đổi phá vỡ bị chặn bằng máy.
