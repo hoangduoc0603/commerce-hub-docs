@@ -69,7 +69,7 @@ Viết lại bước 1–2 ngày 2026-11-15 (bỏ `service-kit`). Lần làm bư
 - [x] 5. `.dockerignore`, Dockerfile multi-stage (4 layer, base ghim digest, `USER 10001:10001`, nhãn OCI, `ENTRYPOINT` exec), chưa AOT. Kiểm: `docker run --rm --entrypoint id` ra `uid=10001`; container trả `/livez` `UP`; đủ 7 nhãn OCI.
 - [x] 6. AOT cache: training run trong runtime stage, `-XX:AOTCache=app.aot`. Kiểm: `-Xlog:aot` cho thấy cache được nạp.
 - [x] 7. Trivy local. Kiểm: `--severity HIGH,CRITICAL --ignore-unfixed --exit-code 1` thoát 0; ngoại lệ (nếu có) trong `.trivyignore` kèm hạn.
-- [ ] 8. Số đo arm64: kích thước, build lạnh và ấm, khởi động có và không AOT. Kiểm: `docs/experiments/2026-11-container-image-hello.md` đủ số.
+- [x] 8. Số đo arm64: kích thước, build lạnh và ấm, khởi động có và không AOT. Kiểm: `docs/experiments/2026-11-container-image-hello.md` đủ số.
 - [ ] 9. **(chờ 17)** `java-service.yml` trong `platform` (check, Buildx `--pull` amd64, tag SHA, Trivy chặn và SARIF, push GHCR, output digest) và `ci.yml` mỏng trong `hello`. Kiểm: digest trong output job khớp `docker buildx imagetools inspect ghcr.io/…:<sha>`.
 - [ ] 10. **(chờ 17)** Build ấm trên CI, số đo amd64, kết ticket. Kiểm: log push chỉ có layer `application` và `app.aot` mới (Q6).
 
@@ -147,3 +147,19 @@ Image `hello:dev` commit `0bb4b87` (arm64), `docker save` ra `build/image/hello.
 | `.trivyignore` | Không cần |
 
 Lần quét đầu 1 phút 14 giây (tải DB), các lần sau vài giây.
+
+### Bước 8 (2026-11-16)
+
+Bản ghi [2026-11-container-image-hello.md](../../../experiments/2026-11-container-image-hello.md), link từ [2026-11-g0.md](../../../experiments/2026-11-g0.md). Image commit `0bb4b87`, arm64 native trên Mac M1 Pro.
+
+| Số đo | Kết quả |
+|---|---|
+| Kích thước | 563 MB giải nén, 136,1 MB nén; base 102,4 MB nén, `hello` thêm 33,8 MB (`dependencies` 19,6 MB, `app.aot` 14,1 MB, `application` 1,8 kB) |
+| Build lạnh (`--no-cache`, trung vị 3 lần) | Docker 7,00 s; Gradle `clean bootJar` 0,81 s |
+| Build ấm (sửa 1 class, trung vị 3 lần) | 8,25 s; chỉ layer 11 và 12 (`application`, `app.aot`) đổi |
+| Build không đổi code | 1,31 s |
+| Khởi động, trung vị 5 lần (`process running for`) | Có AOT 0,729 s; không AOT 1,545 s; nhanh hơn 2,1 lần |
+
+Vấp: lần đo build ấm đầu chỉ 2,05 s, vì hằng số thêm vào trùng giá trị đã build ở bản chép; jar tái lập được nên BuildKit dùng lại cache. Đo lại với giá trị mới mỗi lần.
+
+Ghi cho bước 9: hai lần `--no-cache` từ cùng jar ra layer `groupadd`, `WORKDIR`, `dependencies`, `application`, `app.aot` khác nhau, vì mtime ghi lúc build. Runner CI không có BuildKit cache thì mỗi lần đẩy lại cả `dependencies`; cần `cache-from`/`cache-to` hoặc chuẩn hóa timestamp để đạt tiêu chí Q6 (**chưa xác minh** cách nào hợp GHCR).
