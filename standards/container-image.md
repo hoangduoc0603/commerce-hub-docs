@@ -81,7 +81,7 @@ Ghi vào `docs/experiments/YYYY-MM-container-image-<service>.md`, đo cho servic
 | Số đo | Lệnh | Tiêu chí |
 |---|---|---|
 | Kích thước image (nén và giải nén) | `docker buildx imagetools inspect <img>@<digest>`; `docker image inspect <img> --format '{{.Size}}'` | Ghi số; so với lần đo trước, tăng > 10% phải giải thích |
-| Thời gian build lạnh và ấm (chỉ đổi code) | `time docker buildx build --platform linux/amd64 --no-cache ...` rồi build lại sau khi sửa 1 class | Build ấm chỉ tải lên lại layer `application` (kiểm trong log push) |
+| Thời gian build lạnh và ấm (chỉ đổi code) | `time docker buildx build --platform linux/amd64 --no-cache ...` rồi build lại sau khi sửa 1 class | Build ấm chỉ tải lên lại layer `application` và layer `app.aot` (kiểm trong log push). `app.aot` phụ thuộc toàn bộ classpath nên sinh lại mỗi khi code đổi (sửa 2026-11-16, [ticket G0-23](../.scratch/g0-platform/issues/23-hello-image.md) Q6) |
 | Thời gian khởi động có và không AOT cache | So dòng log "Started ... in N seconds" của Spring Boot trong 2 lần chạy | AOT cache phải nhanh hơn; ghi tỉ lệ |
 | Lỗ hổng | `trivy image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 <img>` | 0 HIGH/CRITICAL đã có bản vá |
 | Non-root | `docker run --rm --entrypoint id <img>` | `uid=10001`, không phải 0 |
