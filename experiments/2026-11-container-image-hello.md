@@ -1,4 +1,4 @@
-# Bản ghi: container image của `hello` (arm64, trên máy)
+# Bản ghi: container image của `hello` (arm64 trên máy, amd64 trên CI)
 
 Ticket [G0-23](../.scratch/g0-platform/issues/23-hello-image.md), bước 8. Bằng chứng theo mục "Bằng chứng cần có" của [container-image.md](../standards/container-image.md). Đo ngày **2026-11-16** khoảng 15:20–15:40 UTC.
 
@@ -109,4 +109,70 @@ Tỉ lệ trung vị: `process running for` nhanh hơn **2,1 lần** (1,545 / 0,
 - Giả thuyết 1 **đúng**: build ấm chỉ đổi `application` và `app.aot`, trên máy có build cache. Trên CI, điều này còn phụ thuộc cache hoặc timestamp, xem phát hiện phụ.
 - Giả thuyết 2 **đúng**: AOT cache rút thời gian tới khi sẵn sàng từ 1,55 s xuống 0,73 s (nhanh hơn 2,1 lần). Cái giá: thêm 14,1 MB nén mỗi bản deploy và khoảng 5 s mỗi lần build. Giữ AOT cache (Q6).
 - Giả thuyết 3 **đúng một phần**: `hello` thêm 33,8 MB nén vào base 102,4 MB. Trong đó 14,1 MB là `app.aot`, 19,6 MB là thư viện; code của `hello` chỉ 1,8 kB. Base JRE Ubuntu là phần lớn nhất, đổi base (`jlink`, distroless) chỉ đáng xét khi kích thước thành vấn đề ([container-image.md](../standards/container-image.md), bảng phương án).
-- Số arm64 không thay được số amd64 của image chính thức. Bước 10 đo lại kích thước, build lạnh và ấm trên runner amd64, kèm log push.
+- Số arm64 không thay được số amd64 của image chính thức. Số amd64 ở mục dưới (bước 10).
+
+## amd64 trên CI (bước 9c, 10)
+
+Đo ngày **2026-11-16** khoảng 17:13–17:24 UTC. Runner `ubuntu-24.04` của GitHub (amd64), job `ci / image / publish` của reusable workflow `java-service.yml` → `container-image.yml` (`platform` `v0.2.0`). Builder `docker-container` (`moby/buildkit:buildx-stable-1`), cache BuildKit `type=gha,mode=max` scope `commerce-hub-hello`. Thời gian bước lấy từ API jobs (`completed_at - started_at`, làm tròn giây); thời gian bước BuildKit lấy từ dòng `#N DONE` trong log.
+
+Ba lần push vào `main` của `commerce-hub-hello`:
+
+| Lần | Commit | Cache trước đó | Thay đổi |
+|---|---|---|---|
+| Lạnh | `64a0f14` | Rỗng (entry `buildkit-blob-*` đầu tiên của repo tạo lúc 17:15, trong chính lần chạy này) | Lần đầu có CI |
+| Ấm 1 | `29c0d5c` | Của `64a0f14` | Thêm một hằng số vào `HelloApplication` |
+| Ấm 2 | `99e22ef` | Của `29c0d5c` | Revert hằng số |
+
+### Kích thước (image `ghcr.io/hoangduoc0603/commerce-hub-hello:64a0f14…`, digest `sha256:61df6f4c…0c7d`)
+
+| | Giá trị |
+|---|---|
+| Manifest | Một `application/vnd.oci.image.manifest.v1+json`, `linux/amd64` (không index, không attestation) |
+| Tổng nén (tổng `size` các layer trong manifest) | 138,1 MB (arm64: 136,1 MB) |
+| Base Temurin (5 layer đầu) | 104,3 MB nén |
+| Phần `hello` thêm vào | 33,7 MB nén: `dependencies` 19,6 MB, `app.aot` 14,1 MB, `application` 1,7 kB |
+| Giải nén (`docker image inspect --format '{{.Size}}'` sau khi pull về Mac, containerd image store) | 542 MB |
+
+Cùng cấu trúc với arm64; `app.aot` amd64 nén 14,08 MB so với 14,1 MB arm64.
+
+### Thời gian
+
+| Bước trong job `publish` | Lạnh | Ấm 1 | Ấm 2 |
+|---|---|---|---|
+| `build-push-action` lần 1 (build, `load`, ghi cache gha) | 36 s | 36 s | 29 s |
+| trong đó: training AOT (`#17 DONE`) | 6,5 s | 4,8 s | 6,7 s |
+| trong đó: ghi cache gha | 18,2 s | 13,8 s | 4,7 s |
+| Trivy (2 lần quét, tải DB lần đầu) | 31 s | 29 s | 43 s |
+| `build-push-action` lần 2 (push, mọi bước từ cache) | 7 s | 4 s | 4 s |
+| `pushing layers` của BuildKit | 5,8 s | 3,7 s | 2,6 s |
+| Cả job `publish` | 99 s | 118 s | 105 s |
+| Job `check` (`./gradlew build`) | 65 s | 35 s | 33 s |
+
+Ở cỡ `hello`, build ấm không nhanh hơn build lạnh bao nhiêu: phần chiếm thời gian là khởi tạo builder, training AOT, Trivy và ghi cache, không phải các layer được dùng lại. Cache gha có tác dụng chính là **giữ digest của layer**, không phải giảm thời gian. Job `check` nhanh gấp đôi khi có cache Gradle (setup-gradle ghi ở lần lạnh).
+
+### Layer đổi khi build ấm (tiêu chí Q6)
+
+So `layers[].digest` trong manifest trên GHCR (`docker buildx imagetools inspect --raw`):
+
+| # | Layer | Lạnh → Ấm 1 | Ấm 1 → Ấm 2 |
+|---|---|---|---|
+| 1–5 | Base Temurin | giữ | giữ |
+| 6 | `groupadd … useradd` | giữ | giữ |
+| 7 | `WORKDIR` | giữ | giữ |
+| 8 | `dependencies` | giữ | giữ |
+| 9, 10 | `spring-boot-loader`, `snapshot-dependencies` | giữ | giữ |
+| 11 | `application` | **đổi** | **đổi** |
+| 12 | `app.aot` | **đổi** | **đổi** |
+
+Log BuildKit của Ấm 1: bước `COPY` của `dependencies`, `spring-boot-loader`, `snapshot-dependencies` và `RUN groupadd` đều `CACHED`; chỉ `extract`, `COPY application` và training chạy lại. Layer đã có trên GHCR (cùng digest) không đẩy lại. Tiêu chí Q6 **đạt**.
+
+### Bản push là bản đã quét
+
+Bước "Kiểm bản push trùng bản đã quét" của `container-image.yml` so `rootfs.diff_ids` của image trên GHCR với image đã nạp vào Docker và quét: trùng cả 12 layer ở mọi lần chạy. Config digest cũng trùng: lần lạnh, Image ID của bản quét và `config.digest` trên GHCR đều là `sha256:1cb99f9b…ebf7`. Lần build thứ hai (push) không sinh image mới mà xuất lại đúng kết quả đã có trong builder.
+
+## Phát hiện phụ (CI)
+
+- **Cùng code, khác digest.** Ấm 2 revert về đúng bytecode của lần lạnh (jar tái lập được), nhưng layer 11 và 12 vẫn khác lần lạnh: cache gha khi đó đã chứa kết quả của Ấm 1, jar đổi nên `extract` chạy lại và ghi mtime mới, kéo theo `application` và training AOT. Đây là lý do tag = SHA phải có lớp chặn ghi đè (G0-17): build lại cùng commit không cho cùng digest.
+- **Nhãn khi build ở máy.** Bỏ `version` khỏi Dockerfile thì image ở máy mang `org.opencontainers.image.version=24.04`, thừa hưởng từ nhãn của base Ubuntu. Trên CI nhãn của workflow đè lên.
+- **Cổng Trivy trên CI** (thử ở PR `platform` #2, image thử `FROM alpine:3.10.0`): `Total: 12 (HIGH: 9, CRITICAL: 3)`, bước Trivy exit 1, job `publish` không chạy; SARIF vẫn được đẩy (30 kết quả trong Code scanning). Với `hello`: 0 HIGH/CRITICAL, Code scanning có 43 alert mở (39 MEDIUM, 4 LOW).
+- **AOT cache trên node của cụm**: cache train trên CPU của runner GitHub; chạy trên node Hyper-V của lab có nạp được không thì kiểm ở G0-24 bằng `-Xlog:aot` (**chưa xác minh**).
