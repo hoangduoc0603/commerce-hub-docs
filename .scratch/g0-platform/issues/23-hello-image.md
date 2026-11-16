@@ -255,6 +255,10 @@ Kiểm sau sửa:
 - Chưa thử được nhánh lỗi (layer lệch) trên CI: không có cách gây lệch thật mà không sửa workflow.
 - Nhánh đã merge chưa xóa: `g0-23-review` của `platform` (local và remote), `g0-23-ci` của `hello` (local và remote).
 
+### Dependabot alert đầu tiên (2026-11-17)
+
+Job `dependency-graph` gửi graph lần đầu thì GitHub mở [alert #1](https://github.com/hoangduoc0603/commerce-hub-hello/security/dependabot/1): `org.apache.commons:commons-lang3` 3.16.0, CVE-2025-48924 (GHSA-j288-q9x7-2f5v, medium, vá ở 3.18.0). `./gradlew buildEnvironment` cho thấy gói chỉ ở classpath plugin (`spring-boot-gradle-plugin` 4.1.2 → `spring-boot-buildpack-platform` → `commons-compress` 1.27.1); `dependencyInsight` không thấy ở `runtimeClasspath`, `testRuntimeClasspath`; Trivy không thấy trong image. Chủ repo chọn dismiss với lý do `not_used`, kèm comment. Loại: ép 3.18.0 qua `buildscript` (lệch mặc định Initializr, phải nhớ gỡ).
+
 ## Bài học
 
 - Review bắt được hai lỗi mà chạy xanh không lộ ra: kiểm sau khi đã gắn tag thì bản lỗi vẫn có tag và chặn re-run (sửa: push theo digest, kiểm, rồi mới tag); nhóm `concurrency` theo ref cho phép lần chạy sau hủy lần push đang chờ. Và `imagetools create` không gắn tag được mà giữ digest; thử trên `registry:2` mất hai phút, đỡ một lần đoán sai.
