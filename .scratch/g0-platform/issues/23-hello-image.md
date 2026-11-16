@@ -68,7 +68,7 @@ Viết lại bước 1–2 ngày 2026-11-15 (bỏ `service-kit`). Lần làm bư
 - [x] 4. Test Actuator chỉ ở cổng quản trị, `/livez` `/readyz` ở cổng chính (đỏ) → `management.server.port: 8081`, `add-additional-paths`. Kiểm: test xanh; `bootRun` thì `curl :8080/livez` là `UP`, `curl :8080/actuator/health` là 404.
 - [x] 5. `.dockerignore`, Dockerfile multi-stage (4 layer, base ghim digest, `USER 10001:10001`, nhãn OCI, `ENTRYPOINT` exec), chưa AOT. Kiểm: `docker run --rm --entrypoint id` ra `uid=10001`; container trả `/livez` `UP`; đủ 7 nhãn OCI.
 - [x] 6. AOT cache: training run trong runtime stage, `-XX:AOTCache=app.aot`. Kiểm: `-Xlog:aot` cho thấy cache được nạp.
-- [ ] 7. Trivy local. Kiểm: `--severity HIGH,CRITICAL --ignore-unfixed --exit-code 1` thoát 0; ngoại lệ (nếu có) trong `.trivyignore` kèm hạn.
+- [x] 7. Trivy local. Kiểm: `--severity HIGH,CRITICAL --ignore-unfixed --exit-code 1` thoát 0; ngoại lệ (nếu có) trong `.trivyignore` kèm hạn.
 - [ ] 8. Số đo arm64: kích thước, build lạnh và ấm, khởi động có và không AOT. Kiểm: `docs/experiments/2026-11-container-image-hello.md` đủ số.
 - [ ] 9. **(chờ 17)** `java-service.yml` trong `platform` (check, Buildx `--pull` amd64, tag SHA, Trivy chặn và SARIF, push GHCR, output digest) và `ci.yml` mỏng trong `hello`. Kiểm: digest trong output job khớp `docker buildx imagetools inspect ghcr.io/…:<sha>`.
 - [ ] 10. **(chờ 17)** Build ấm trên CI, số đo amd64, kết ticket. Kiểm: log push chỉ có layer `application` và `app.aot` mới (Q6).
@@ -133,3 +133,17 @@ Commit `0bb4b87` (bước 4 và 5 nằm chung commit `ae26026`, vì phần `src/
 | Jar bị `touch` sau khi train | `auto`: in `timestamp has changed` rồi chạy tiếp không cache; `on`: dừng với `shared class paths mismatch` |
 
 Vấp: `ARG REVISION/VERSION/CREATED` đặt đầu runtime stage làm mọi `RUN` phía sau mất cache mỗi lần build, vì `CREATED` đổi mỗi lần (chỉ 4 bước `CACHED`, training chạy lại). Dời `ARG` và `LABEL` xuống sau training: đủ 10 bước `CACHED`, training không chạy lại. Nguồn: [Dockerfile reference – Impact on build caching](https://docs.docker.com/reference/dockerfile/#impact-on-build-caching).
+
+### Bước 7 (2026-11-16)
+
+Image `hello:dev` commit `0bb4b87` (arm64), `docker save` ra `build/image/hello.tar`, quét bằng `aquasec/trivy:0.76.2@sha256:8f6bb947dbc528902e11f2f5be52f7b519f6a39d5d148f41166f2040499768fb` (mount tar chỉ đọc, không mount `docker.sock`; DB cache trong volume `trivy-cache`, DB cập nhật 2026-11-16 13:03 UTC).
+
+| Kiểm | Kết quả |
+|---|---|
+| `--severity HIGH,CRITICAL --ignore-unfixed --exit-code 1` | exit 0. 42 target đều `0`: Ubuntu 24.04 (108 gói) và 41 jar trong `application/lib/`. Không thấy secret |
+| Mọi mức, kể cả chưa vá | 0 HIGH, 0 CRITICAL; 38 MEDIUM, 4 LOW |
+| MEDIUM đã có bản vá | 18, đều ở glibc của base (`libc-bin`, `libc6`, `locales`); hết khi Temurin ra digest mới và Dependabot mở PR |
+| Cổng chặn: `--severity MEDIUM --ignore-unfixed --exit-code 1` | exit 1, cổng hoạt động |
+| `.trivyignore` | Không cần |
+
+Lần quét đầu 1 phút 14 giây (tải DB), các lần sau vài giây.
