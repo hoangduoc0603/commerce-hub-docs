@@ -194,7 +194,7 @@ Chốt 2026-11-15 với chủ repo. Đây là nơi duy nhất ghi thứ tự; ti
 - **Mục tiêu là code hệ thống.** Dựng khung `hello`, đưa lên lab sớm, rồi thêm code dần; mỗi tính năng đi qua đường deploy đã chạy, nên lỗi tích hợp lộ ra khi `hello` còn ít thứ để hỏng.
 - **Hạ tầng làm khi code cần tới**: mỗi ticket hạ tầng đứng ngay trước ticket code dùng nó.
 
-Đã xong: 01–08, 18 (`service-kit`, thôi dùng từ 2026-11-15). Hoãn: 09, 12, 31, 33 (G7); 15, 16, 20, 25 (G1).
+Đã xong: 01–08, 17, 18 (`service-kit`, thôi dùng từ 2026-11-15). Hoãn: 09, 12, 31, 33 (G7); 15, 16, 20, 25 (G1).
 
 | # | Ticket | `hello` có thêm gì | Chặn bởi |
 |---|---|---|---|
@@ -452,7 +452,7 @@ Chưa có code trong polyrepo, nên không có test cũ để noi theo. Mẫu g�
 
   Theo [issue-tracker.md](../../agents/issue-tracker.md), mỗi ticket chỉ đưa vào một khái niệm mới, nên vài bước trên sẽ tách thành nhiều ticket (ví dụ PKI tách khỏi Envoy Gateway, Barman Cloud tách khỏi `pg-main`). Ticket là `ready-for-human` và có mục "Mục tiêu học".
 - Bước 9–13 phụ thuộc vào bước 3–8 chỉ ở phần deploy lên lab; phần build, test, `ct install` trên kind làm song song được.
-- **(sửa 2026-11-15)** Điểm chưa xác minh phải đóng trong G0 chỉ còn: RSS `hello` ở `MaxRAMPercentage=60`; span JDBC với Spring Boot 4.1; ~~`nullif` với `''` trên connection đã từng đặt tham số~~ (sang G1 cùng ticket 25); đọc package chéo repo bằng `GITHUB_TOKEN`; chart monolithic của Tempo; UI của Apicurio tắt được không; package GHCR của repo public có tự public không (ADR-0017). Ruleset, policy ghim SHA và `actions.lock` đã xác minh ở G0-01; PDB của CloudNativePG đã xác minh ở G0-08. Phần còn lại của danh sách cũ dưới đây (attestation, k6 với Keychain, `timeout-minutes` 360, RAM của RustFS) sang G7.
+- **(sửa 2026-11-15)** Điểm chưa xác minh phải đóng trong G0 chỉ còn: RSS `hello` ở `MaxRAMPercentage=60`; span JDBC với Spring Boot 4.1; ~~`nullif` với `''` trên connection đã từng đặt tham số~~ (sang G1 cùng ticket 25); đọc package chéo repo bằng `GITHUB_TOKEN`; chart monolithic của Tempo; UI của Apicurio tắt được không; ~~package GHCR của repo public có tự public không (ADR-0017)~~ (đã xác minh ở G0-17, 2026-11-16: có). Ruleset, policy ghim SHA và `actions.lock` đã xác minh ở G0-01; PDB của CloudNativePG đã xác minh ở G0-08. Phần còn lại của danh sách cũ dưới đây (attestation, k6 với Keychain, `timeout-minutes` 360, RAM của RustFS) sang G7.
 - Danh sách cũ, **điểm chưa xác minh thuộc G0**, gom từ ticket và chuẩn: RSS `hello` ở `MaxRAMPercentage=60`; PDB của CloudNativePG khi có 1 instance; UI của Apicurio tắt được không; RAM của RustFS và Mailpit trên `gw`; chart monolithic của Tempo; span JDBC với Spring Boot 4.1; k6 trên macOS có đọc root trong Keychain không; ruleset trên tài khoản cá nhân; policy ghim SHA ở mức owner; `actions.lock`; attestation với registry HTTP; đọc package chéo repo bằng `GITHUB_TOKEN`; `nullif` với `''` trên connection đã từng đặt tham số; giới hạn 360 phút của `timeout-minutes`.
 - Bản ghi thí nghiệm tổng của G0 (Charter G5: giả thuyết, cách đo, số đo, kết luận) đặt ở `docs/experiments/`, link tới các bản ghi theo chủ đề mà từng file chuẩn quy định.
 - Các quyết định **(mới)** trong spec đều đổi lại được với chi phí thấp, nên không viết ADR mới. Riêng cổng ADR-0004 có thể dẫn tới sửa ADR đó.

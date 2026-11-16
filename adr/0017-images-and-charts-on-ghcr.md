@@ -21,5 +21,5 @@ Bối cảnh: ngày 2026-11-15 chủ repo chốt lại trọng tâm học là ba
 - Image và chart công khai trên internet. Chấp nhận được vì code đã public (ADR-0006) và image không chứa secret.
 - Cụm phụ thuộc ghcr.io: mất internet là không kéo được image mới. Pod đang chạy vẫn chạy bình thường.
 - Attestation lưu cùng registry trên GHCR, nên `gh attestation verify` sau này chạy được (phần này đã xếp sang G7).
-- **Chưa xác minh**, chốt ở G0-17: package do workflow của repo public tạo ra có tự public không. Nếu không, bật public một lần cho mỗi package. Với chart, cũng cần kiểm package có nối được với repo `platform` không.
+- ~~**Chưa xác minh**, chốt ở G0-17: package do workflow của repo public tạo ra có tự public không. Nếu không, bật public một lần cho mỗi package. Với chart, cũng cần kiểm package có nối được với repo `platform` không.~~ **Đã xác minh 2026-11-16** ở G0-17: image push bằng `GITHUB_TOKEN` từ workflow của `platform` tạo package Public, tự nối với repo `platform`, và node của cụm kéo được mà không có credential (chi tiết ở [ci-cd.md](../standards/ci-cd.md), mục "Image, SBOM, provenance"). Chart OCI push cùng cách nên dự kiến giống; ticket G0-21 kiểm lại với package chart đầu tiên.
 - Xét lại khi: chuyển repo sang private (cần pull secret), hoặc cần chạy lab không có internet.
