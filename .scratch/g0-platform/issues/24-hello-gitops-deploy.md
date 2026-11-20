@@ -9,6 +9,16 @@ Spec: [G0](../spec.md)
 
 Tracer bullet của G0: merge vào nhánh mặc định của `hello` thì job `update-gitops` (token GitHub App, ở G0 chỉ cài trên `gitops`; `e2e` thêm khi làm ticket 31 ở G7) sửa digest và tag trong values lab của `hello`. `ApplicationSet` sinh app trong project `commerce`, chart `app` kéo từ GHCR (đổi nguồn `10.20.0.5:5000/charts` của ticket 03, thêm GHCR vào `sourceRepos` của `commerce`, không dùng `insecureOCIForceHttp`; [ADR-0017](../../../adr/0017-images-and-charts-on-ghcr.md)), namespace `hello` do app `platform` tạo kèm nhãn cho phép route. `hello` mở qua `https://hello.lab.internal` (ngoại lệ chỉ có ở G0). Values lab: 1 replica, 512Mi, `MaxRAMPercentage=60`. Theo mục "Deploy qua GitOps" của [ci-cd.md](../../../standards/ci-cd.md), "Cập nhật image" của [gitops-argocd.md](../../../standards/gitops-argocd.md).
 
+## Đã làm ở G0-22 (2026-11-20)
+
+Theo quyết định Q1 của [ticket 22](22-chart-app-edge.md#quyết-định-khi-lập-lộ-trình-2026-11-20): release thử của chart `app` chính là `hello`, nên phần gitops của ticket này đã có sẵn. Ticket này còn lại job `update-gitops`, đo lead time, rollback và các tiêu chí bên dưới.
+
+- App `namespaces` (project `platform`, wave 8) tạo namespace `hello` có nhãn PSS restricted, `edge.lab.internal/routes`, `trust.lab.internal/inject`.
+- Project `commerce` có `ghcr.io/hoangduoc0603/charts` trong `sourceRepos`; chart OCI public nên không cần repository Secret.
+- ApplicationSet `services-lab` kéo chart `app` 0.2.0 từ GHCR.
+- `envs/lab/hello/values.yaml`: image `16efc28` theo digest **ghi tay**, 1 replica, 512Mi, `MaxRAMPercentage=60`, route `hello.lab.internal`. Job `update-gitops` sẽ sửa `image.digest` và `image.tag` trong file này.
+- `svc-hello` `Synced/Healthy`; `curl https://hello.lab.internal/livez` trả 200, `/` trả 404 của Spring.
+
 ## Mục tiêu học
 
 - Đẩy image qua GitOps: CI chỉ commit vào `gitops`, không giữ quyền vào cụm.
