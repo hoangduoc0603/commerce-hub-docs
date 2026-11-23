@@ -3,7 +3,7 @@
 Status: ready-for-agent
 Ngày: 2026-11-13, sửa phạm vi 2026-11-15 (xem mục [Sửa phạm vi 2026-11-15](#sửa-phạm-vi-2026-11-15))
 Nguồn: [Map kiến trúc G0–G1](../architecture-g0-g1/map.md) (ticket 01–19 đã chốt), [C18](../../requirements-and-techniques.md#c18-lộ-trình-gợi-ý), [`docs/standards/`](../../standards/), ADR-0001..0018
-Repos: docs, platform, gitops, contracts, services/hello, e2e (`libs/service-kit` bỏ từ 2026-11-15, [ADR-0018](../../adr/0018-self-contained-services-no-shared-library-yet.md))
+Repos: docs, platform, gitops, ~~contracts~~ (bỏ 2026-11-24, [ADR-0019](../../adr/0019-no-contracts-repo.md)), services/hello, e2e (`libs/service-kit` bỏ từ 2026-11-15, [ADR-0018](../../adr/0018-self-contained-services-no-shared-library-yet.md))
 Yêu cầu: N12 (khung). N11 (hook RLS) sang G1 và N10 (backup) hoãn tới G7, cùng từ 2026-11-15
 
 ## Problem Statement
@@ -21,8 +21,8 @@ Có ba rủi ro cụ thể chưa ai đo:
 Dựng nền tảng production-grade tối thiểu trên cụm home lab, rồi chứng minh nó bằng một service mỏng `hello`, cũng là template cho mọi service G1:
 
 - Toàn bộ hạ tầng trong cụm do Argo CD quản lý từ repo `gitops`. Bootstrap bằng đúng hai lệnh tay; sau đó mọi thay đổi đi qua Git.
-- Cửa vào cụm (`*.lab.internal` qua Gateway `edge`, TLS bằng CA của lab), PostgreSQL `pg-main` có backup liên tục, Kafka 3 broker cùng Apicurio, Keycloak với realm `commerce-hub` dạng code, stack LGTM với OpenTelemetry Collector.
-- Đường từ code tới cụm dùng chung cho mọi repo: chart `app`, reusable workflow, ~~`libs/service-kit`~~ (bỏ 2026-11-15, ADR-0018), pipeline của `contracts`, image build một lần, deploy bằng commit vào `gitops`.
+- Cửa vào cụm (`*.lab.internal` qua Gateway `edge`, TLS bằng CA của lab), PostgreSQL `pg-main` có backup liên tục, Kafka 3 broker ~~cùng Apicurio~~ (bỏ Apicurio 2026-11-24, ADR-0019), Keycloak với realm `commerce-hub` dạng code, stack LGTM với OpenTelemetry Collector.
+- Đường từ code tới cụm dùng chung cho mọi repo: chart `app`, reusable workflow, ~~`libs/service-kit`~~ (bỏ 2026-11-15, ADR-0018), ~~pipeline của `contracts`~~ (bỏ 2026-11-24), image build một lần, deploy bằng commit vào `gitops`.
 - `services/hello`: một API REST nhỏ bắt buộc JWT, ghi và đọc một bảng trong PostgreSQL. Mỗi request sinh một trace có span HTTP và span DB trên Tempo, và hiện trên một dashboard Grafana viết bằng code.
 - Repo `e2e` chạy smoke test sau mỗi lần deploy, gọi `https://hello.lab.internal` qua `edge`, rồi kiểm có trace trên Tempo và có metric trên Grafana.
 - Mọi điểm **chưa xác minh** của G0 được thử thật. Số đo (RAM sau 24 giờ, RSS của `hello`, kích thước image, lead time, rollout không lỗi…) ghi vào `docs/experiments/`. G0 kết thúc bằng quyết định giữ hay sửa ADR-0004 trước khi vào G1.
@@ -65,7 +65,7 @@ Dựng nền tảng production-grade tối thiểu trên cụm home lab, rồi c
 23. Là người vận hành lab, tôi muốn topic và user Kafka khai báo bằng CR trong `gitops`, để cấu hình topic trên lab và trên Mac giống nhau.
 24. Là người vận hành lab, tôi muốn listener của Kafka bắt xác thực ngay từ G0, để G1 chỉ cần thêm `KafkaUser` cho từng service.
 25. Là người vận hành lab, tôi muốn Strimzi Drain Cleaner chạy, để drain node không làm mất ISR của partition.
-26. Là developer, tôi muốn Apicurio Registry 3 chạy trong cụm, không tự đăng ký schema, để mọi schema đi qua bước kiểm tương thích của `contracts`.
+26. ~~Là developer, tôi muốn Apicurio Registry 3 chạy trong cụm, không tự đăng ký schema, để mọi schema đi qua bước kiểm tương thích của `contracts`.~~ Bỏ (2026-11-24, [ADR-0019](../../adr/0019-no-contracts-repo.md)).
 
 ### Keycloak
 
@@ -108,10 +108,12 @@ Dựng nền tảng production-grade tối thiểu trên cụm home lab, rồi c
 
 ### `contracts`
 
-54. Là developer, tôi muốn OpenAPI của `hello` và schema `Problem` dùng chung nằm trong `contracts`, để contract có trước code.
-55. Là developer, tôi muốn CI của `contracts` lint OpenAPI, chặn thay đổi phá vỡ bằng `oasdiff breaking`, kiểm Avro `BACKWARD_TRANSITIVE` với Apicurio, để thay đổi phá vỡ không merge được.
-56. Là developer, tôi muốn `contracts` publish Maven và npm lên GitHub Packages chỉ từ tag `vX.Y.Z`, không ghi đè, để service phụ thuộc vào một version bất biến.
-57. Là developer, tôi muốn một lệnh đăng ký schema dùng chung cho CI, Apicurio trên Mac và Apicurio trên lab, để không môi trường nào auto-register.
+> Story 54–57 bỏ (2026-11-24, [ADR-0019](../../adr/0019-no-contracts-repo.md)).
+
+54. ~~Là developer, tôi muốn OpenAPI của `hello` và schema `Problem` dùng chung nằm trong `contracts`, để contract có trước code.~~
+55. ~~Là developer, tôi muốn CI của `contracts` lint OpenAPI, chặn thay đổi phá vỡ bằng `oasdiff breaking`, kiểm Avro `BACKWARD_TRANSITIVE` với Apicurio, để thay đổi phá vỡ không merge được.~~
+56. ~~Là developer, tôi muốn `contracts` publish Maven và npm lên GitHub Packages chỉ từ tag `vX.Y.Z`, không ghi đè, để service phụ thuộc vào một version bất biến.~~
+57. ~~Là developer, tôi muốn một lệnh đăng ký schema dùng chung cho CI, Apicurio trên Mac và Apicurio trên lab, để không môi trường nào auto-register.~~
 
 ### `libs/service-kit`
 
@@ -131,7 +133,7 @@ Dựng nền tảng production-grade tối thiểu trên cụm home lab, rồi c
 66. Là developer G1, tôi muốn tạo service mới bằng "Use this template" từ `hello`, để service mới build được, CI xanh và có trace ngay từ commit đầu.
 67. Là developer, tôi muốn `hello` bắt buộc JWT của realm `commerce-hub` với audience `commerce-hub-api`, trả 401 Problem Details cho token thiếu, sai `aud`, hết hạn hoặc từ realm khác, để template đúng mặc định của G1.
 68. Là developer, tôi muốn tạo một lời chào và đọc lại theo ID, nhận 404 Problem Details khi ID không có và 400 kèm `errors[]` khi tên không hợp lệ, để template minh họa đủ quy ước lỗi.
-69. Là developer, tôi muốn request và response của `hello` được kiểm với OpenAPI trong `contracts` ngay trong test, để code không trôi khỏi contract.
+69. ~~Là developer, tôi muốn request và response của `hello` được kiểm với OpenAPI trong `contracts` ngay trong test, để code không trôi khỏi contract.~~ (Sửa 2026-11-24, [ADR-0019](../../adr/0019-no-contracts-repo.md)) Là developer, tôi muốn test HTTP của `hello` kiểm JSON bằng JsonPath trên đúng tên field, để đổi tên field trong code thì test đỏ.
 70. Là developer, tôi muốn migration của `hello` chạy bằng chính image với profile `migrate` trong Job `PreSync`, migration lỗi thì Deployment giữ bản cũ, để deploy không bao giờ chạy code mới trên schema cũ.
 71. Là developer, tôi muốn image của `hello` chạy non-root, có AOT cache, và đo được thời gian khởi động có và không có cache, để chọn cấu hình bằng số.
 72. Là người vận hành lab, tôi muốn biết RSS thật của `hello` ở 512 Mi với `MaxRAMPercentage=60`, để chốt giá trị cho mọi service G1.
@@ -139,7 +141,7 @@ Dựng nền tảng production-grade tối thiểu trên cụm home lab, rồi c
 
 ### Vòng dev trên Mac
 
-74. Là developer, tôi muốn `platform/compose` dựng Kafka 1 broker, Apicurio, PostgreSQL 18 với role giống lab, PgBouncer `transaction` và Keycloak, đọc realm và topic từ bản checkout `../gitops`, để dev giống lab mà Mac không ghi vào lab.
+74. Là developer, tôi muốn `platform/compose` dựng Kafka 1 broker, ~~Apicurio~~ (bỏ 2026-11-24), PostgreSQL 18 với role giống lab, PgBouncer `transaction` và Keycloak, đọc realm và topic từ bản checkout `../gitops`, để dev giống lab mà Mac không ghi vào lab.
 75. Là developer, tôi muốn Testcontainers chạy cùng một lệnh `./gradlew check` trên Mac và CI, với tag image cùng major.minor như production, để test đỏ trên Mac cũng đỏ trên CI. **(sửa 2026-11-15)** Tag ghim trong test của từng service, kèm comment trỏ tới version trong `gitops` (ADR-0018).
 76. Là developer, tôi muốn một job phát hiện khi tag image của compose, Testcontainers và lab lệch major.minor, để ba nơi không trôi xa nhau. **(sửa 2026-11-15)** Ở G0 job chỉ so compose với `gitops`; quét test của từng service xét lại ở G1.
 
@@ -186,6 +188,16 @@ Chủ repo chốt lại trọng tâm học ([Charter](../../project-charter.md) 
 
 Phần lớn quyết định dưới đây đã chốt ở ticket 01–19 của map và ADR. Spec chỉ gom lại theo module và thêm những quyết định mới cần cho G0, đánh dấu **(mới)**. Phiên bản lấy theo dòng "Phiên bản áp dụng" của từng file `docs/standards/`.
 
+### Sửa phạm vi 2026-11-24 (bỏ `contracts`)
+
+Chốt với chủ repo ngày 2026-11-24, sau một vòng grilling khi bắt đầu ticket 19 ([ADR-0019](../../adr/0019-no-contracts-repo.md)). Trọng tâm học là bên trong từng service, không phải bài toán giữ tương thích khi các service tiến hóa độc lập. Mục này thắng mọi dòng mâu thuẫn bên dưới, trong phần User Stories và trong mục "Sửa phạm vi 2026-11-15".
+
+- **Bỏ repo `contracts`.** Ticket 16 (Apicurio), 19 (OpenAPI), 20 (contract Avro): `wontfix`. Repo `commerce-hub-contracts` được archive. Story 54–57 bỏ; story 26 (Apicurio) bỏ.
+- **`hello` viết API code-first** (ticket 26, 28): controller, DTO và Bean Validation viết tay; không springdoc. Story 69 đổi thành: test HTTP kiểm JSON bằng JsonPath trên đúng tên field, đổi tên field thì test đỏ. Seam test 2 bỏ dòng validator OpenAPI. Danh mục `code` của Problem Details nằm trong `hello`.
+- **Event ở G1 là JSON, không schema registry**: producer khai record, consumer chép record đó (tolerant reader), không kiểm tương thích. Chi tiết chốt ở đầu G1. Apicurio bỏ khỏi cụm và khỏi `platform/compose` (story 74, ticket 32); job so lệch tag image không còn Apicurio.
+- **Không có package Maven hay npm nào** trên GitHub Packages. Điểm chưa xác minh "đọc package chéo repo bằng `GITHUB_TOKEN`" và "UI của Apicurio tắt được không" không còn.
+- **Thứ tự làm**: bỏ hàng 7 (ticket 19). Sau 24 là **26**, và 26, 28 không còn chặn bởi 19.
+
 ### Thứ tự làm
 
 Chốt 2026-11-15 với chủ repo. Đây là nơi duy nhất ghi thứ tự; ticket không có trường thứ tự riêng.
@@ -194,7 +206,7 @@ Chốt 2026-11-15 với chủ repo. Đây là nơi duy nhất ghi thứ tự; ti
 - **Mục tiêu là code hệ thống.** Dựng khung `hello`, đưa lên lab sớm, rồi thêm code dần; mỗi tính năng đi qua đường deploy đã chạy, nên lỗi tích hợp lộ ra khi `hello` còn ít thứ để hỏng.
 - **Hạ tầng làm khi code cần tới**: mỗi ticket hạ tầng đứng ngay trước ticket code dùng nó.
 
-Đã xong: 01–08, 17, 18 (`service-kit`, thôi dùng từ 2026-11-15), 23. Hoãn: 09, 12, 31, 33 (G7); 15, 16, 20, 25 (G1).
+Đã xong: 01–08, 17, 18 (`service-kit`, thôi dùng từ 2026-11-15), 23. Hoãn: 09, 12, 31, 33 (G7); 15, 25 (G1). Bỏ (`wontfix`, 2026-11-24, [ADR-0019](../../adr/0019-no-contracts-repo.md)): 16, 19, 20.
 
 | # | Ticket | `hello` có thêm gì | Chặn bởi |
 |---|---|---|---|
@@ -204,10 +216,10 @@ Chốt 2026-11-15 với chủ repo. Đây là nơi duy nhất ghi thứ tự; ti
 | 4 | 21 | Chart `app` | 17 |
 | 5 | 22 | Route qua `edge`, truststore | 07, 21 |
 | 6 | 24 | Khung `hello` chạy trên lab qua GitOps | 06, 22, 23 |
-| 7 | 19 | OpenAPI của `hello` | 01 |
-| 8 | 26 | API lời chào bằng JdbcClient và Flyway, chạy trên máy bằng `bootTestRun` | 19 |
+| ~~7~~ | ~~19~~ | ~~OpenAPI của `hello`~~ bỏ (2026-11-24, [ADR-0019](../../adr/0019-no-contracts-repo.md)) | ~~01~~ |
+| 8 | 26 | API lời chào bằng JdbcClient và Flyway, chạy trên máy bằng `bootTestRun` | ~~19~~ — |
 | 9 | 27 | API có DB chạy trên lab (Job `PreSync`) | 08, 24, 26 |
-| 10 | 28 | Problem Details | 19, 26 |
+| 10 | 28 | Problem Details | ~~19,~~ 26 |
 | 11 | 10 | Keycloak | 08 |
 | 12 | 11 | Realm dạng code | 10 |
 | 13 | 29 | Bắt JWT | 11, 27, 28 |
@@ -263,7 +275,7 @@ Keycloak (10, 11) phải đứng trước 29: sau 29, mọi route của `hello` 
 
 - Strimzi 1.3.1, Kafka 4.3.2 KRaft, 3 node dual-role, mỗi broker 1 Gi với heap 512m, `default.replication.factor: 3`, `min.insync.replicas: 2`. Entity Operator (topic và user) có limit. Có Strimzi Drain Cleaner.
 - Listener nội bộ bắt xác thực ngay từ G0, theo mục "Bảo mật" của [kafka.md](../../standards/kafka.md). `KafkaUser` cho từng service thêm ở G1.
-- Apicurio Registry 3 qua operator, lưu trên `pg-main` hoặc theo mặc định của operator (chọn theo [kafka.md](../../standards/kafka.md)). Tắt UI nếu `spec.ui` cho phép (**chưa xác minh**, thử ở G0).
+- ~~Apicurio Registry 3 qua operator, lưu trên `pg-main` hoặc theo mặc định của operator (chọn theo [kafka.md](../../standards/kafka.md)). Tắt UI nếu `spec.ui` cho phép (**chưa xác minh**, thử ở G0).~~ Bỏ (2026-11-24, [ADR-0019](../../adr/0019-no-contracts-repo.md)).
 - G0 không tạo topic nghiệp vụ. Topic `perf` chỉ tạo tạm cho phép đo độ bền, xong thì xóa.
 
 ### Keycloak
@@ -293,7 +305,7 @@ Keycloak (10, 11) phải đứng trước 29: sau 29, mọi route của `hello` 
 
 ### CI/CD (`platform` và mọi repo)
 
-- Reusable workflow trong `platform`: `java-service`, ~~`java-library`~~, `contracts`, `update-gitops`, `chart`. **(mới)** Tách `java-library` khỏi `java-service` vì lib publish Maven từ tag và không build image. **(sửa 2026-11-15)** `java-library.yml` đã xóa cùng `service-kit` ([ADR-0018](../../adr/0018-self-contained-services-no-shared-library-yet.md)); `contracts` tự viết bước publish Maven ở ticket 19. `node-app` để G1.
+- Reusable workflow trong `platform`: `java-service`, ~~`java-library`~~, ~~`contracts`~~ (bỏ 2026-11-24), `update-gitops`, `chart`. **(mới)** Tách `java-library` khỏi `java-service` vì lib publish Maven từ tag và không build image. **(sửa 2026-11-15)** `java-library.yml` đã xóa cùng `service-kit` ([ADR-0018](../../adr/0018-self-contained-services-no-shared-library-yet.md)); `contracts` tự viết bước publish Maven ở ticket 19. `node-app` để G1.
 - `platform` phát hành bằng release SemVer bất biến. Repo gọi ghim SHA đầy đủ kèm comment version.
 - Mọi workflow: `permissions` tối thiểu, action ghim SHA, không `pull_request_target`, secret truyền tường minh, `timeout-minutes`, upload báo cáo test khi đỏ. Job push image, attestation, `update-gitops` chỉ chạy khi push vào nhánh mặc định.
 - Image: build một lần trên runner amd64 bằng Buildx, tag là git SHA, ghi digest; Trivy chặn HIGH/CRITICAL đã có bản vá; SBOM của BuildKit; `actions/attest` rồi `gh attestation verify` trước khi sửa `gitops`. Nếu verify không chạy được với registry HTTP thì ghi lý do bỏ vào lệch chuẩn của [ci-cd.md](../../standards/ci-cd.md).
@@ -302,6 +314,8 @@ Keycloak (10, 11) phải đứng trước 29: sau 29, mọi route của `hello` 
 - **(mới)** Một script trong `platform` tạo và cấu hình repo bằng `gh`: public, MIT, bảo vệ nhánh tối thiểu (ruleset nếu tài khoản cá nhân bật được, không thì branch protection), secret scanning, push protection, CodeQL default setup, Dependabot, policy ghim SHA ở mức repo nếu không có ở mức owner.
 
 ### `contracts`
+
+> **Bỏ** (2026-11-24, [ADR-0019](../../adr/0019-no-contracts-repo.md)). Các dòng dưới là lịch sử.
 
 - G0 chứa OpenAPI của `hello` và schema `Problem` dùng chung (danh mục `code` nghiệp vụ còn rỗng). Chưa có schema Avro nghiệp vụ; schema Member và sáu event thuộc G1.
 - CI: lint OpenAPI → `oasdiff breaking` so với tag trước → kiểm Avro `BACKWARD_TRANSITIVE` với Apicurio trong Testcontainers → sinh code → publish Maven và npm lên GitHub Packages chỉ từ tag.
@@ -322,13 +336,13 @@ Keycloak (10, 11) phải đứng trước 29: sau 29, mọi route của `hello` 
   - Thiếu context thì ném exception. Không cho đổi Workspace khi transaction đang mở.
   - **(mới)** Có chế độ khai báo tường minh "transaction không thuộc Workspace": hook không đặt tham số, nên mọi bảng có RLS trả 0 dòng (policy dùng `nullif`). Không có chế độ nào bỏ qua RLS. `hello` dùng chế độ này; `workspace` dùng cho bảng `account` ở G1.
   - Test-fixtures: test catalog (RLS `ENABLE`/`FORCE`, policy đúng mẫu, allowlist bảng toàn cục, FK ghép, quyền sở hữu hàm, quyền của `_app`) và test hành vi qua container PgBouncer `transaction`.
-- **(mới)** Nguồn tag image: production trong `gitops` là nguồn sự thật. `test-support` giữ bảng tag cho Testcontainers; compose giữ tag của nó. Một job theo lịch trong `platform` so major.minor của PostgreSQL, Kafka, Keycloak, Apicurio giữa ba nơi (đọc file của repo public qua API) và đỏ khi lệch. Job chỉ kiểm, không phải phụ thuộc lúc build, nên không trái ADR-0001.
+- **(mới)** Nguồn tag image: production trong `gitops` là nguồn sự thật. `test-support` giữ bảng tag cho Testcontainers; compose giữ tag của nó. Một job theo lịch trong `platform` so major.minor của PostgreSQL, Kafka, Keycloak, ~~Apicurio~~ giữa ba nơi (đọc file của repo public qua API) và đỏ khi lệch. Job chỉ kiểm, không phải phụ thuộc lúc build, nên không trái ADR-0001.
 
 ### `services/hello` (template)
 
 - Java 25, Spring Boot 4.1.2, Spring MVC trên virtual thread, ~~Gradle 9 Groovy DSL với convention plugin~~ project do Spring Initializr sinh (Gradle Groovy DSL), giữ mặc định theo [spring-service.md](../../standards/spring-service.md) (sửa 2026-11-15), bật "template repository" trên GitHub.
 - Layout hexagonal một module: `domain`, `application` (use case cộng port), `adapter.in.web`, `adapter.out.persistence`. Persistence dùng `JdbcClient`. ~~Mẫu JPA nằm trong test của `service-kit`, không nằm trong template.~~ **(sửa 2026-11-15)** Layout là quy ước, không có ArchUnit. Mẫu JPA có ở service JPA đầu tiên của G1.
-- **(mới)** API (contract trong `contracts`): tạo lời chào từ một `name` (1–50 ký tự), trả 201 với ID UUIDv7 và header `Location`; đọc lời chào theo ID trả 200, hoặc 404 Problem Details khi không có. Tiền tố `/v1`. Mọi route bắt buộc JWT, `aud` là `commerce-hub-api`, chỉ RS256.
+- **(mới)** API (~~contract trong `contracts`~~ code-first trong `hello`, sửa 2026-11-24, [ADR-0019](../../adr/0019-no-contracts-repo.md)): tạo lời chào từ một `name` (1–50 ký tự), trả 201 với ID UUIDv7 và header `Location`; đọc lời chào theo ID trả 200, hoặc 404 Problem Details khi không có. Tiền tố `/v1`. Mọi route bắt buộc JWT, `aud` là `commerce-hub-api`, chỉ RS256.
 - Bảng toàn cục duy nhất, Flyway chạy bằng profile `migrate` trong Job `PreSync` với role `_migrator`; runtime dùng `_app` qua PgBouncer.
 - Quan sát: `spring-boot-starter-opentelemetry` cộng `micrometer-registry-prometheus`, không dùng OTel Java agent; resource attributes đặt tường minh (`service.name`, `service.namespace=commerce-hub`, `service.version`, `deployment.environment.name=lab`); log JSON có `traceId`; Actuator ở management port riêng.
 - **(mới)** Span DB là bắt buộc. Thư viện sinh span JDBC (ứng viên `datasource-micrometer`) chạy được với Spring Boot 4.1 hay không là điểm **chưa xác minh**, chốt khi làm ticket `hello`. Lựa chọn ghi vào [observability.md](../../standards/observability.md) để mọi service dùng chung.
@@ -338,7 +352,7 @@ Keycloak (10, 11) phải đứng trước 29: sau 29, mọi route của `hello` 
 
 ### `platform/compose` và `platform/kind`
 
-- Theo ticket 13: Kafka KRaft 1 broker, Apicurio 3, PostgreSQL 18 (database và bốn role cho mỗi service; G0 có `hello`), PgBouncer `transaction`, Keycloak; hai init đọc `../gitops` (keycloak-config-cli áp realm; `yq` đọc CR `KafkaTopic`); `.env.example`; profile `obs` với `grafana/otel-lgtm`. README ghi lệch ADR-0001 chỉ ở dev.
+- Theo ticket 13: Kafka KRaft 1 broker, ~~Apicurio 3~~ (bỏ 2026-11-24), PostgreSQL 18 (database và bốn role cho mỗi service; G0 có `hello`), PgBouncer `transaction`, Keycloak; hai init đọc `../gitops` (keycloak-config-cli áp realm; `yq` đọc CR `KafkaTopic`); `.env.example`; profile `obs` với `grafana/otel-lgtm`. README ghi lệch ADR-0001 chỉ ở dev.
 - `platform/kind`: cấu hình kind cho `ct install` trong CI.
 
 ### `e2e`
@@ -384,7 +398,7 @@ Keycloak (10, 11) phải đứng trước 29: sau 29, mọi route của `hello` 
 
 1. **Lab thật, qua `edge`** (repo `e2e`): smoke ở mục `e2e` trên, gồm cả assertion trace (Tempo) và dashboard (Grafana, Prometheus). Đây là seam chứng minh mục tiêu G0: "service hello có trace và dashboard".
 2. **Service qua HTTP** (`./gradlew check` của `hello`): MockMvc với PostgreSQL thật đi qua PgBouncer `transaction` (Testcontainers), Flyway chạy từ đầu.
-   - Request và response kiểm với OpenAPI từ artifact `contracts` (ví dụ `swagger-request-validator`).
+   - ~~Request và response kiểm với OpenAPI từ artifact `contracts` (ví dụ `swagger-request-validator`).~~ (Sửa 2026-11-24, [ADR-0019](../../adr/0019-no-contracts-repo.md)) JSON của request và response kiểm bằng JsonPath trên đúng tên field.
    - 401 với token thiếu, sai `aud`, hết hạn, realm khác, ký bằng khóa lạ (JWK giả trong test).
    - 404 và 400 trả Problem Details đúng dạng, có `traceId`.
    - ~~Test catalog RLS từ test-fixtures pass, với bảng của `hello` trong allowlist.~~ Sang G1 (sửa 2026-11-15).
@@ -452,7 +466,7 @@ Chưa có code trong polyrepo, nên không có test cũ để noi theo. Mẫu g�
 
   Theo [issue-tracker.md](../../agents/issue-tracker.md), mỗi ticket chỉ đưa vào một khái niệm mới, nên vài bước trên sẽ tách thành nhiều ticket (ví dụ PKI tách khỏi Envoy Gateway, Barman Cloud tách khỏi `pg-main`). Ticket là `ready-for-human` và có mục "Mục tiêu học".
 - Bước 9–13 phụ thuộc vào bước 3–8 chỉ ở phần deploy lên lab; phần build, test, `ct install` trên kind làm song song được.
-- **(sửa 2026-11-15)** Điểm chưa xác minh phải đóng trong G0 chỉ còn: RSS `hello` ở `MaxRAMPercentage=60`; span JDBC với Spring Boot 4.1; ~~`nullif` với `''` trên connection đã từng đặt tham số~~ (sang G1 cùng ticket 25); đọc package chéo repo bằng `GITHUB_TOKEN`; chart monolithic của Tempo; UI của Apicurio tắt được không; ~~package GHCR của repo public có tự public không (ADR-0017)~~ (đã xác minh ở G0-17, 2026-11-16: có). Ruleset, policy ghim SHA và `actions.lock` đã xác minh ở G0-01; PDB của CloudNativePG đã xác minh ở G0-08. Phần còn lại của danh sách cũ dưới đây (attestation, k6 với Keychain, `timeout-minutes` 360, RAM của RustFS) sang G7.
+- **(sửa 2026-11-15)** Điểm chưa xác minh phải đóng trong G0 chỉ còn: RSS `hello` ở `MaxRAMPercentage=60`; span JDBC với Spring Boot 4.1; ~~`nullif` với `''` trên connection đã từng đặt tham số~~ (sang G1 cùng ticket 25); ~~đọc package chéo repo bằng `GITHUB_TOKEN`~~ (bỏ cùng `contracts`, 2026-11-24); chart monolithic của Tempo; ~~UI của Apicurio tắt được không~~ (bỏ cùng Apicurio, 2026-11-24); ~~package GHCR của repo public có tự public không (ADR-0017)~~ (đã xác minh ở G0-17, 2026-11-16: có). Ruleset, policy ghim SHA và `actions.lock` đã xác minh ở G0-01; PDB của CloudNativePG đã xác minh ở G0-08. Phần còn lại của danh sách cũ dưới đây (attestation, k6 với Keychain, `timeout-minutes` 360, RAM của RustFS) sang G7.
 - Danh sách cũ, **điểm chưa xác minh thuộc G0**, gom từ ticket và chuẩn: RSS `hello` ở `MaxRAMPercentage=60`; PDB của CloudNativePG khi có 1 instance; UI của Apicurio tắt được không; RAM của RustFS và Mailpit trên `gw`; chart monolithic của Tempo; span JDBC với Spring Boot 4.1; k6 trên macOS có đọc root trong Keychain không; ruleset trên tài khoản cá nhân; policy ghim SHA ở mức owner; `actions.lock`; attestation với registry HTTP; đọc package chéo repo bằng `GITHUB_TOKEN`; `nullif` với `''` trên connection đã từng đặt tham số; giới hạn 360 phút của `timeout-minutes`.
 - Bản ghi thí nghiệm tổng của G0 (Charter G5: giả thuyết, cách đo, số đo, kết luận) đặt ở `docs/experiments/`, link tới các bản ghi theo chủ đề mà từng file chuẩn quy định.
 - Các quyết định **(mới)** trong spec đều đổi lại được với chi phí thấp, nên không viết ADR mới. Riêng cổng ADR-0004 có thể dẫn tới sửa ADR đó.

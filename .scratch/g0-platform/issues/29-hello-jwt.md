@@ -18,4 +18,4 @@ Mọi route của `hello` bắt buộc JWT của realm `commerce-hub`: chỉ RS2
 - [ ] Test tự động (JWK giả): không token, sai `aud`, hết hạn, realm khác, ký bằng khóa lạ đều trả 401 Problem Details.
 - [ ] Trên lab: token client credentials của client test tạo được lời chào; không token thì 401.
 - [ ] Bỏ mount truststore trong values thì `hello` không tải được JWKS (lỗi `PKIX` trong log); bật lại thì chạy.
-- [ ] OpenAPI trong `contracts` khai bảo mật bearer khớp hành vi.
+- ~~OpenAPI trong `contracts` khai bảo mật bearer khớp hành vi.~~ Bỏ (2026-11-24, [ADR-0019](../../../adr/0019-no-contracts-repo.md)).

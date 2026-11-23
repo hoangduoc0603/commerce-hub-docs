@@ -1,6 +1,7 @@
 # 19: `contracts`: OpenAPI của `hello`, chặn thay đổi phá vỡ, publish
 
-Status: ready-for-human
+Status: wontfix
+Lý do bỏ: 2026-11-24, [ADR-0019](../../../adr/0019-no-contracts-repo.md) và spec G0 mục "Sửa phạm vi 2026-11-24". Chủ repo chốt trọng tâm học là bên trong từng service; dự án bỏ repo `contracts`, REST viết code-first, event là JSON không schema registry, không kiểm tương thích giữa service. Ticket kế trong "Thứ tự làm" là 26.
 Blocked by: 01
 Repos: contracts, platform, docs
 Spec: [G0](../spec.md)

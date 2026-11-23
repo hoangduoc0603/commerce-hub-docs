@@ -71,9 +71,9 @@ Yêu cầu (chi tiết phần sắp làm) → Thiết kế (ADR, contract) → C
 |---|---|---|
 | 1. Lập kế hoạch | Charter này | `docs/project-charter.md` |
 | 2. Yêu cầu | SRS, domain model, luồng người dùng, ma trận truy vết, glossary | `docs/requirements/`, `docs/GLOSSARY.md` |
-| 3. Thiết kế | Kiến trúc (arc42 + C4), ADR, contract (Avro, AsyncAPI, OpenAPI) | `docs/architecture/`, `docs/adr/`, repo `contracts` |
+| 3. Thiết kế | Kiến trúc (arc42 + C4), ADR, ~~contract (Avro, AsyncAPI, OpenAPI)~~ (bỏ 2026-11-24, [ADR-0019](adr/0019-no-contracts-repo.md)) | `docs/architecture/`, `docs/adr/`, ~~repo `contracts`~~ |
 | 4. Code | Repo service, simulator, frontend | `services/`, `simulators/`, `frontend/` |
-| 5. Test | Unit, integration (Testcontainers), contract (Pact), e2e, tải (k6), chaos | Trong từng repo, `load-tests/` |
+| 5. Test | Unit, integration (Testcontainers), ~~contract (Pact)~~ (ngoài phạm vi, [ADR-0019](adr/0019-no-contracts-repo.md)), e2e, tải (k6), chaos | Trong từng repo, `load-tests/` |
 | 6. Deploy | Helm values, image tag, Argo CD Application | repo `gitops` |
 | 7. Vận hành | Dashboard, SLO, runbook, postmortem | `docs/runbooks/`, `docs/experiments/` |
 

@@ -242,7 +242,7 @@ Phiên bản nền: Java 25, **Spring Boot 4.1.x** (cùng dòng với `sp-jpa`).
 
 | Kỹ thuật | Dùng ở đâu | Ghi chú |
 |---|---|---|
-| **REST + OpenAPI (contract-first)** | API cho FE, API giữa service (ít), simulator | Spec ở `openapi/` của repo `contracts`, sinh client/server stub |
+| ~~**REST + OpenAPI (contract-first)**~~ | API cho FE, API giữa service (ít), simulator | **Ngoài phạm vi** (2026-11-24, [ADR-0019](adr/0019-no-contracts-repo.md)). REST viết code-first trong từng service. ~~Spec ở `openapi/` của repo `contracts`, sinh client/server stub~~ |
 | **HTTP client có timeout tường minh** | Mọi lời gọi ra ngoài, đặc biệt là gọi sàn | Spring `RestClient` / HTTP Interface. Không bao giờ để timeout mặc định vô hạn |
 | **Service discovery bằng DNS của Kubernetes** | Gọi nội bộ | Không cần Eureka khi chạy trên K8s. Đây là chủ đề hay bị hỏi: khi nào còn cần Eureka |
 | **gRPC** (tùy chọn) | order → inventory để kiểm tồn nhanh | Để so sánh với REST: độ trễ, contract, streaming |
@@ -260,7 +260,7 @@ Phiên bản nền: Java 25, **Spring Boot 4.1.x** (cùng dòng với `sp-jpa`).
 | **Idempotent consumer / inbox table** | Mọi consumer có side effect | Kafka giao at-least-once. Lưu `eventId` đã xử lý cùng transaction với thay đổi nghiệp vụ |
 | **Xử lý sai thứ tự bằng version** | order (theo `channelUpdateTime`), listing | Event cũ đến sau event mới thì bỏ qua. Đây là bài toán có thật vì sàn không đảm bảo thứ tự (A2) |
 | **Event notification vs event-carried state transfer** | Webhook sàn là notification (phải gọi API lấy dữ liệu); `ChannelOrderSynced` mang đủ state | Hiểu trade-off: dữ liệu cũ vs số lần gọi |
-| **Schema Registry + Avro** (hoặc Protobuf) | `avro/` của repo `contracts` | Quy tắc tiến hóa schema (backward/forward compatible). Thí nghiệm: thêm field, đổi kiểu, deploy lệch phiên bản |
+| ~~**Schema Registry + Avro** (hoặc Protobuf)~~ | ~~`avro/` của repo `contracts`~~ | **Ngoài phạm vi** (2026-11-24, [ADR-0019](adr/0019-no-contracts-repo.md)). Event là JSON, consumer chép record của producer. ~~Quy tắc tiến hóa schema (backward/forward compatible). Thí nghiệm: thêm field, đổi kiểu, deploy lệch phiên bản~~ |
 | **Retry topic + Dead Letter Topic** | Consumer gặp lỗi | Spring Kafka `@RetryableTopic`. Phân biệt lỗi tạm thời (retry) và lỗi vĩnh viễn (DLT). Cần công cụ xem và replay DLT |
 | **Choreography vs orchestration** | Đồng bộ tồn kho dùng choreography; xử lý đơn dùng orchestration (B3) | Làm cả hai để so sánh khả năng theo dõi, độ ghép nối, xử lý lỗi |
 | **Consumer lag làm tín hiệu** | Mọi consumer group | Lag là chỉ số sức khỏe chính và là tín hiệu autoscale (C13) |
@@ -408,7 +408,7 @@ Phiên bản nền: Java 25, **Spring Boot 4.1.x** (cùng dòng với `sp-jpa`).
 
 ## C12. CI/CD và GitOps
 
-- CI (GitHub Actions): build, test, Testcontainers, kiểm tra contract, quét bảo mật, build image, push registry (registry trên VM `gw` của home lab).
+- CI (GitHub Actions): build, test, Testcontainers, ~~kiểm tra contract~~ (ngoài phạm vi, [ADR-0019](adr/0019-no-contracts-repo.md)), quét bảo mật, build image, push registry (registry trên VM `gw` của home lab).
 - **GitOps với Argo CD**: repo `gitops` là nguồn sự thật; CI của service chỉ cập nhật image tag trong đó. Chart dùng chung publish từ repo `platform`, values theo môi trường nằm ở `gitops` (Argo CD multiple sources).
 - **Reusable workflow**: mỗi repo service gọi workflow chung trong repo `platform` thay vì chép CI.
 - **Canary hoặc blue-green** với Argo Rollouts, kèm phân tích tự động theo metric (tỷ lệ lỗi, `stock_sync_lag`).
@@ -429,7 +429,7 @@ Phiên bản nền: Java 25, **Spring Boot 4.1.x** (cùng dòng với `sp-jpa`).
 |---|---|---|
 | Unit | JUnit 5, AssertJ | State machine đơn, công thức tồn kho, ánh xạ trạng thái từng sàn |
 | Integration | **Testcontainers** (PostgreSQL, Kafka, Redis) | Outbox, idempotent consumer, locking dưới tải đồng thời |
-| Contract | **Pact** (REST giữa service), kiểm tra tương thích schema Avro | Đổi API không làm vỡ consumer |
+| ~~Contract~~ | ~~**Pact** (REST giữa service), kiểm tra tương thích schema Avro~~ | **Ngoài phạm vi** (2026-11-24, [ADR-0019](adr/0019-no-contracts-repo.md)) |
 | Component với simulator | Docker Compose: service + simulator | Webhook trùng, sai thứ tự, token hết hạn |
 | Load | **k6** hoặc Gatling (repo `load-tests`) | N3, N6: ngày thường, flash sale, tăng đột biến |
 | Chaos | Toxiproxy, Chaos Mesh, lỗi từ simulator | N4, N7: sàn sập 10 phút, Kafka chậm, kill pod giữa saga |

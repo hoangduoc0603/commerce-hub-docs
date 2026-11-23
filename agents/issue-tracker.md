@@ -10,7 +10,7 @@ Lý do: dự án làm một mình, các repo chưa có remote. Hệ thống là 
 - Spec nằm ở `docs/.scratch/<feature-slug>/spec.md`
 - Mỗi ticket triển khai là một file riêng: `docs/.scratch/<feature-slug>/issues/<NN>-<slug>.md`, đánh số từ `01`. Không gộp nhiều ticket vào một file.
 - Trạng thái triage ghi bằng một dòng `Status:` ở đầu file issue (xem `triage-labels.md`).
-- Ticket chạm vào repo nào thì ghi rõ bằng dòng `Repos:` (ví dụ `Repos: contracts, services/order`). Code vẫn commit trong repo tương ứng.
+- Ticket chạm vào repo nào thì ghi rõ bằng dòng `Repos:` (ví dụ `Repos: platform, services/order`). Code vẫn commit trong repo tương ứng.
 - Ghi mã yêu cầu (F…, BR-…, N…, SIM-…) trong tiêu đề hoặc thân ticket để truy vết.
 - Bình luận và lịch sử trao đổi nối vào cuối file, dưới heading `## Comments`.
 

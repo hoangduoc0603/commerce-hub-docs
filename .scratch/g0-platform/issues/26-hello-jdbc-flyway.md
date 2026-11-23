@@ -1,13 +1,13 @@
 # 26: `hello` lưu lời chào bằng JdbcClient và Flyway
 
 Status: ready-for-human
-Blocked by: 19 (bỏ 25 ngày 2026-11-15, [ADR-0018](../../../adr/0018-self-contained-services-no-shared-library-yet.md))
+Blocked by: — (bỏ 19 ngày 2026-11-24, [ADR-0019](../../../adr/0019-no-contracts-repo.md); bỏ 25 ngày 2026-11-15, [ADR-0018](../../../adr/0018-self-contained-services-no-shared-library-yet.md))
 Repos: services/hello, docs
 Spec: [G0](../spec.md)
 
 ## Mô tả
 
-`hello` có API tạo và đọc lời chào theo OpenAPI của `contracts`, lưu vào một bảng toàn cục (không `workspace_id`) bằng `JdbcClient`, ID là UUIDv7 ~~(thêm module `ids` vào `service-kit` nếu chưa có)~~ sinh ngay trong `hello`. Migration Flyway chạy bằng profile `migrate`; ~~runtime dùng chế độ "không thuộc Workspace" của hook~~. Test chạy trên PostgreSQL thật đi qua PgBouncer `transaction` (Testcontainers). ~~Bảng nằm trong allowlist của test catalog, lý do ghi ngay tại chỗ.~~
+`hello` có API tạo và đọc lời chào ~~theo OpenAPI của `contracts`~~ viết code-first (controller, DTO record, Bean Validation `name` 1–50 ký tự; sửa 2026-11-24, [ADR-0019](../../../adr/0019-no-contracts-repo.md)), lưu vào một bảng toàn cục (không `workspace_id`) bằng `JdbcClient`, ID là UUIDv7 ~~(thêm module `ids` vào `service-kit` nếu chưa có)~~ sinh ngay trong `hello`. Migration Flyway chạy bằng profile `migrate`; ~~runtime dùng chế độ "không thuộc Workspace" của hook~~. Test chạy trên PostgreSQL thật đi qua PgBouncer `transaction` (Testcontainers). ~~Bảng nằm trong allowlist của test catalog, lý do ghi ngay tại chỗ.~~
 
 ## Sửa phạm vi 2026-11-15 (bỏ `service-kit`)
 

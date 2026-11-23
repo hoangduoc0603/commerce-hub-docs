@@ -1,8 +1,9 @@
 # 16: Apicurio Registry trong cụm
 
-Status: ready-for-human
-Hoãn tới: G1 (quyết định 2026-11-15, spec G0 mục "Sửa phạm vi 2026-11-15")
-Lý do: G0 không có producer hay consumer nào; làm khi service G1 đầu tiên phát event (nguyên tắc "hạ tầng làm khi code cần tới", mục "Thứ tự làm" của spec).
+Status: wontfix
+Lý do bỏ: 2026-11-24, [ADR-0019](../../../adr/0019-no-contracts-repo.md): event ở G1 là JSON, không có schema registry nên không dựng Apicurio.
+~~Hoãn tới: G1 (quyết định 2026-11-15, spec G0 mục "Sửa phạm vi 2026-11-15")
+Lý do: G0 không có producer hay consumer nào; làm khi service G1 đầu tiên phát event (nguyên tắc "hạ tầng làm khi code cần tới", mục "Thứ tự làm" của spec).~~
 Blocked by: 08, 15
 Repos: gitops, docs
 Spec: [G0](../spec.md)

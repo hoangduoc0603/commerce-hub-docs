@@ -1,8 +1,9 @@
 # 20: `contracts`: kiểm tương thích Avro và lệnh đăng ký schema
 
-Status: ready-for-human
-Hoãn tới: G1 (quyết định 2026-11-15, spec G0 mục "Sửa phạm vi 2026-11-15")
-Lý do: G0 không có producer hay consumer nào; làm khi service G1 đầu tiên phát event (nguyên tắc "hạ tầng làm khi code cần tới", mục "Thứ tự làm" của spec).
+Status: wontfix
+Lý do bỏ: 2026-11-24, [ADR-0019](../../../adr/0019-no-contracts-repo.md): không còn repo `contracts`, event ở G1 là JSON, không kiểm tương thích.
+~~Hoãn tới: G1 (quyết định 2026-11-15, spec G0 mục "Sửa phạm vi 2026-11-15")
+Lý do: G0 không có producer hay consumer nào; làm khi service G1 đầu tiên phát event (nguyên tắc "hạ tầng làm khi code cần tới", mục "Thứ tự làm" của spec).~~
 Blocked by: 19
 Repos: contracts, platform, docs
 Spec: [G0](../spec.md)

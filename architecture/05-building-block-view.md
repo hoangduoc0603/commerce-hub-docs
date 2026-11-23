@@ -76,7 +76,7 @@ flowchart LR
     class cc,cat,ord,inv,ws,all container
 ```
 
-Kafka chạy bằng Strimzi (3 broker KRaft, RF 3, `min.insync.replicas` 2), schema Avro đăng ký ở Apicurio Registry. Chi tiết topic ở [mục 8.5](08-crosscutting-concepts.md#85-event-và-kafka).
+Kafka chạy bằng Strimzi (3 broker KRaft, RF 3, `min.insync.replicas` 2), ~~schema Avro đăng ký ở Apicurio Registry~~ event là JSON, không có schema registry ([ADR-0019](../adr/0019-no-contracts-repo.md)). Chi tiết topic ở [mục 8.5](08-crosscutting-concepts.md#85-event-và-kafka).
 
 ### 5.1.3 Trách nhiệm từng container
 
@@ -92,7 +92,7 @@ Kafka chạy bằng Strimzi (3 broker KRaft, RF 3, `min.insync.replicas` 2), sch
 | `order` | Spring Boot 4.1, `JdbcClient` | Order canonical và trạng thái chuẩn hóa, danh sách đơn gộp (F5.1a), che thông tin người nhận theo Role (N11). Gắn Master SKU vào dòng đơn từ bản sao Mapping (BR-16). Quyết định trạng thái nào giữ tồn (BR-18) | Order, OrderLine, bản sao Mapping (một dòng mỗi Listing), bản sao Short order | `order.stock-demands` | `channel.orders`, `catalog.listing-mappings`, `inventory.short-orders` |
 | Keycloak | Keycloak 26.8.2 | Realm `commerce-hub`: mật khẩu, xác minh email, phiên, khóa đăng nhập (BR-02), Terms and Conditions. Client `seller-web` (confidential), client service account | Database riêng, nối thẳng `pg-main-rw` (không qua PgBouncer) | — | — |
 | `pg-main` | CloudNativePG 1.30.1, PostgreSQL 18; Pooler PgBouncer `transaction` | Database cho mọi service, Keycloak, `seller_web` và `marketplace_sim`. 1 instance ở lab. Backup Barman Cloud lên RustFS, `archive_timeout` 1 phút (N10) | — | — | — |
-| Kafka, Apicurio | Strimzi 1.3.1, Kafka 4.3.2; Apicurio Registry 3.3 | Backbone event, Schema Registry | — | — | — |
+| Kafka | Strimzi 1.3.1, Kafka 4.3.2 (~~Apicurio Registry 3.3~~, bỏ theo [ADR-0019](../adr/0019-no-contracts-repo.md)) | Backbone event | — | — | — |
 
 Mọi service ở bảng trên (trừ `seller-web` và `gateway`) đọc `workspace.members` bằng phần code `workspace-access` (nằm trong service; chép hay tách thư viện quyết ở G1, [ADR-0018](../adr/0018-self-contained-services-no-shared-library-yet.md)). Phần này tự gán mọi partition, không dùng consumer group, đọc lại từ đầu khi khởi động. Pod chỉ ready khi đã đọc tới end offset ([ADR-0008](../adr/0008-keycloak-authn-only-members-replicated-via-kafka.md)).
 
@@ -100,7 +100,7 @@ Chưa có ở G1: `webhook-ingress`, `notification` (G2), `fulfillment` (G4), `r
 
 ### 5.1.4 Simulator
 
-`marketplace-sim` không thuộc sản phẩm, nhưng được build và deploy như một service (chart `app`, Argo CD, namespace `simulators`). Một repo, một pod phục vụ cả hai sàn. Module `sim-core` giữ trạng thái, vòng đời token, nút chỉnh AS-xx, admin API và bộ đếm. Mỗi sàn một module dialect (`dialect-shopee` ở G1, `dialect-tiktok` ở G2) giữ HTTP, chữ ký, mã lỗi và máy trạng thái đơn. Request chia cho dialect theo đường dẫn. Admin API chạy trên port riêng, có OpenAPI trong `contracts`. Dữ liệu lưu ở database `marketplace_sim` trên `pg-main`, không bật RLS. Chi tiết ở ticket [12](../.scratch/architecture-g0-g1/issues/12-shopee-sim.md#answer).
+`marketplace-sim` không thuộc sản phẩm, nhưng được build và deploy như một service (chart `app`, Argo CD, namespace `simulators`). Một repo, một pod phục vụ cả hai sàn. Module `sim-core` giữ trạng thái, vòng đời token, nút chỉnh AS-xx, admin API và bộ đếm. Mỗi sàn một module dialect (`dialect-shopee` ở G1, `dialect-tiktok` ở G2) giữ HTTP, chữ ký, mã lỗi và máy trạng thái đơn. Request chia cho dialect theo đường dẫn. Admin API chạy trên port riêng, viết code-first trong `marketplace-sim` (~~OpenAPI trong `contracts`~~, [ADR-0019](../adr/0019-no-contracts-repo.md)). Dữ liệu lưu ở database `marketplace_sim` trên `pg-main`, không bật RLS. Chi tiết ở ticket [12](../.scratch/architecture-g0-g1/issues/12-shopee-sim.md#answer).
 
 ### 5.1.5 Thành phần nền tảng trong cụm
 
@@ -155,7 +155,7 @@ flowchart LR
 | `test-support` | ~~Luật ArchUnit~~, cấu hình Testcontainers |
 | ~~`gradle-plugin`~~ | ~~Convention plugin `commercehub.spring-service`~~. Bỏ: mỗi service tự khai build theo mặc định Initializr ([spring-service.md](../standards/spring-service.md)) |
 
-Không vào thư viện: logic nghiệp vụ, bảng quyền F1.2a của từng service, code sinh từ Avro/OpenAPI, UUIDv5 tất định (thuộc `contracts`), version guard, business metric.
+Không vào thư viện: logic nghiệp vụ, bảng quyền F1.2a của từng service, ~~code sinh từ Avro/OpenAPI~~, UUIDv5 tất định (namespace và giá trị mẫu ở [ADR-0009](../adr/0009-deterministic-ids-for-marketplace-entities.md), [ADR-0019](../adr/0019-no-contracts-repo.md)), version guard, business metric.
 
 ### `channel-connector`: anti-corruption layer
 

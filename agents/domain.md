@@ -25,7 +25,6 @@ commerce-hub/                 ← thư mục chứa, không phải git repo
 │   │   └── 0002-reserve-stock-on-first-sight.md
 │   ├── requirements/
 │   └── .scratch/             ← issue tracker (xem issue-tracker.md)
-├── contracts/
 ├── services/<service>/
 └── simulators/<simulator>/
 ```

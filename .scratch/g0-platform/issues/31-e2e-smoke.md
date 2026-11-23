@@ -23,4 +23,4 @@ Repo `e2e` (tạo bằng script ticket 01), Playwright TypeScript, chạy trên 
 - [ ] Dashboard "Service overview" tồn tại theo UID; Prometheus có `http_server_requests_seconds_count` của `hello`.
 - [ ] Một merge vào `hello` tự kích hoạt e2e qua `repository_dispatch` và xanh.
 - [ ] Làm hỏng cố ý (ví dụ đổi `aud` mong đợi) thì e2e đỏ và có báo cáo Playwright làm artifact.
-- [ ] Đọc package npm của `contracts` từ CI của `e2e` bằng `GITHUB_TOKEN`; ghi kết quả (điểm chưa xác minh).
+- ~~Đọc package npm của `contracts` từ CI của `e2e` bằng `GITHUB_TOKEN`; ghi kết quả (điểm chưa xác minh).~~ Bỏ (2026-11-24, [ADR-0019](../../../adr/0019-no-contracts-repo.md)).

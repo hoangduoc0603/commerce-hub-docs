@@ -34,7 +34,7 @@ Tiêu chí hoãn tới G7:
   - [ ] Merge vào `hello` → CI push image lên GHCR → commit trong `gitops` → app `Synced/Healthy`.
   - [ ] Qua `https://hello.lab.internal`: không token trả 401 Problem Details; token client credentials của realm `commerce-hub` tạo được lời chào.
   - [ ] Request đó có trace trên Tempo (span HTTP server và span DB), log trên Loki, metric và dashboard "Service overview" có dữ liệu.
-  - ~~Kafka 3 broker và Apicurio `Ready`; pipeline Avro của `contracts` chặn thay đổi phá vỡ (bằng chứng từ ticket 20).~~ Sang đầu G1 cùng ticket 15, 16, 20.
+  - ~~Kafka 3 broker và Apicurio `Ready`; pipeline Avro của `contracts` chặn thay đổi phá vỡ (bằng chứng từ ticket 20).~~ Sang đầu G1 cùng ticket 15, 16, 20. (Sửa 2026-11-24, [ADR-0019](../../../adr/0019-no-contracts-repo.md): ticket 16 và 20 bỏ; đầu G1 chỉ còn Kafka, ticket 15.)
   - [ ] Vòng dev bằng `platform/compose` chạy được (bằng chứng từ ticket 32).
 - [ ] `kubectl top pod -A` đo một lần, theo nhóm của bảng ngân sách; không pod nào OOMKilled lúc đo.
 - [ ] RSS của `hello` dưới 90% limit (NMT summary); chốt `MaxRAMPercentage` cho G1.

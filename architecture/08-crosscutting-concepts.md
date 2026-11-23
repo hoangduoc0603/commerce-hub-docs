@@ -63,7 +63,7 @@ Quyết định: [ADR-0011](../adr/0011-nextjs-bff-with-server-side-session.md).
 
 ## 8.5 Event và Kafka
 
-Quyết định: [ADR-0005](../adr/0005-kafka-from-g1-with-deliberate-dual-write.md), ticket [09](../.scratch/architecture-g0-g1/issues/09-g1-contracts.md#answer), ticket [11](../.scratch/architecture-g0-g1/issues/11-service-template.md#answer). Checklist: [kafka.md](../standards/kafka.md).
+Quyết định: [ADR-0005](../adr/0005-kafka-from-g1-with-deliberate-dual-write.md), ticket [09](../.scratch/architecture-g0-g1/issues/09-g1-contracts.md#answer), ticket [11](../.scratch/architecture-g0-g1/issues/11-service-template.md#answer). Checklist: [kafka.md](../standards/kafka.md). Schema: [ADR-0019](../adr/0019-no-contracts-repo.md).
 
 **Topic G1.** Mỗi topic chứa đúng một loại record. Số partition mặc định 6.
 
@@ -79,8 +79,8 @@ Quyết định: [ADR-0005](../adr/0005-kafka-from-g1-with-deliberate-dual-write
 **Quy tắc chung**
 
 - **Trạng thái đầy đủ kèm version.** Mọi event G1 mang trạng thái đầy đủ của một aggregate. Consumer bỏ bản có version cũ hơn bản đang lưu (version guard `WHERE stored_version < :v`). Riêng event của connector lấy `channelUpdateTime` làm version và áp khi **≥** (BR-31), vì sàn có thể đổi dữ liệu mà không tăng `update_time`. Event đặt tên ở thì quá khứ.
-- **Envelope**: key là chuỗi. Mỗi record có `eventId` (UUIDv7), `occurredAt`, `workspaceId` (bắt buộc) và field version của aggregate. `traceparent` đi trong header. Không có `eventType` hay `schemaVersion`, vì `TopicRecordNameStrategy` và schema ID đã thay chúng.
-- **Schema**: Avro, đăng ký ở Apicurio bằng lệnh của repo `contracts`, không bao giờ `auto.register.schemas`. Tương thích `BACKWARD_TRANSITIVE`, field mới luôn có default. Đổi phá vỡ thì làm topic mới hậu tố `.v2` và phát song song tới khi consumer chuyển xong.
+- **Envelope**: key là chuỗi. Mỗi record có `eventId` (UUIDv7), `occurredAt`, `workspaceId` (bắt buộc) và field version của aggregate. `traceparent` đi trong header. ~~Không có `eventType` hay `schemaVersion`, vì `TopicRecordNameStrategy` và schema ID đã thay chúng.~~ (Sửa 2026-11-24, [ADR-0019](../adr/0019-no-contracts-repo.md)) Mỗi topic chứa đúng một loại record nên không cần `eventType`; không có `schemaVersion` vì không kiểm tương thích. Chốt lại ở đầu G1.
+- **Schema**: ~~Avro, đăng ký ở Apicurio bằng lệnh của repo `contracts`, không bao giờ `auto.register.schemas`. Tương thích `BACKWARD_TRANSITIVE`, field mới luôn có default. Đổi phá vỡ thì làm topic mới hậu tố `.v2` và phát song song tới khi consumer chuyển xong.~~ (Sửa 2026-11-24, [ADR-0019](../adr/0019-no-contracts-repo.md)) Event là JSON, không có schema registry. Producer khai record nó gửi; consumer chép record đó và chỉ đọc field nó cần (tolerant reader). Không kiểm tương thích: producer đổi field thì consumer hỏng lúc chạy, lộ qua test của consumer hoặc DLT. Serde và cách đặt tên chốt ở đầu G1.
 - **Phía phát**:
   - `channel-connector`: gửi, chờ ack (`acks=all`), rồi mới dời checkpoint. Không bao giờ cần outbox, vì sàn là nguồn sự thật và đọc lại được.
   - `order`, `catalog`, `inventory`, `workspace`: domain gọi `publish(event)` bên trong `@Transactional`. Bản G1 gửi ở `AFTER_COMMIT` (cố ý dual-write: hỏng thì mất event, không sinh event ma). Bản G2 ghi dòng outbox trong cùng transaction.
@@ -94,12 +94,12 @@ Quyết định: [ADR-0005](../adr/0005-kafka-from-g1-with-deliberate-dual-write
 
 Quyết định: ticket [09](../.scratch/architecture-g0-g1/issues/09-g1-contracts.md#answer), [ADR-0009](../adr/0009-deterministic-ids-for-marketplace-entities.md).
 
-- **Ranh giới N13.** Contract được mang `marketplace` dạng chuỗi mở (không enum) và các mã sàn dạng chuỗi opaque: `channelOrderId`, `channelStatus`, `channelProductId`, `channelVariantId`. Ngoài connector, không code nào phân tích hay rẽ nhánh theo chúng; chúng chỉ để hiển thị và tìm kiếm. CI của `contracts` chặn field có tên sàn hay khái niệm riêng của sàn (`shopee`, `tiktok`, `ordersn`, `model`…).
+- **Ranh giới N13.** Contract được mang `marketplace` dạng chuỗi mở (không enum) và các mã sàn dạng chuỗi opaque: `channelOrderId`, `channelStatus`, `channelProductId`, `channelVariantId`. Ngoài connector, không code nào phân tích hay rẽ nhánh theo chúng; chúng chỉ để hiển thị và tìm kiếm. ~~CI của `contracts` chặn~~ Review kiến trúc chặn (sửa 2026-11-24, [ADR-0019](../adr/0019-no-contracts-repo.md)) field có tên sàn hay khái niệm riêng của sàn (`shopee`, `tiktok`, `ordersn`, `model`…).
 - **Trạng thái lạ (BR-33)**: connector gửi `status = null` kèm `channelStatus`; order giữ trạng thái chuẩn hóa cũ. Connector xuất metric `channel_status_unmapped_total{marketplace,status}` có alert.
 - **Dòng đơn canonical**: một dòng cho mỗi (Order, Listing). Connector gộp các dòng gốc, cộng `quantity`, `cancelledQuantity`, `lineAmountMinor`.
 - **ID tất định (UUIDv5)** cho thực thể có gốc ở sàn, do connector tính: `listingId`, `orderId`, `orderLineId = v5(orderId, listingId)`. Warehouse mặc định: `v5(workspaceId, "default-warehouse")`. Nhờ vậy hai context cùng biết một ID mà không gọi nhau. Thực thể tạo bên trong hệ thống dùng **UUIDv7**.
-- **Tiền**: `…Minor: long` cộng `currency` ISO 4217, theo số mũ ISO (VND mũ 0). Áp chung cho Avro, OpenAPI và DB (`bigint`).
-- **Thời gian**: luôn UTC. Avro `timestamp-millis`, OpenAPI RFC 3339 có `Z`, DB `timestamptz`. Giao diện hiển thị theo Asia/Ho_Chi_Minh.
+- **Tiền**: `…Minor: long` cộng `currency` ISO 4217, theo số mũ ISO (VND mũ 0). Áp chung cho event, REST và DB (`bigint`).
+- **Thời gian**: luôn UTC. Event và REST dùng RFC 3339 có `Z`, DB `timestamptz` (sửa 2026-11-24, [ADR-0019](../adr/0019-no-contracts-repo.md): bỏ Avro `timestamp-millis`). Giao diện hiển thị theo Asia/Ho_Chi_Minh.
 - **PII trên event**: `ChannelOrderSynced` mang người nhận (tên, điện thoại, địa chỉ). Topic giữ 7 ngày và DLT 14 ngày, đều ngắn hơn 30 ngày của BR-05. `MemberChanged` không mang email hay tên, vì topic compact giữ vĩnh viễn.
 
 ## 8.7 Quy ước REST
@@ -108,8 +108,8 @@ Quyết định: ticket [09](../.scratch/architecture-g0-g1/issues/09-g1-contrac
 
 - **Đường dẫn**: theo tài nguyên, có tiền tố `/v1` (`/v1/orders`, `/v1/master-skus`…), không có tên service. BFF chuyển `/api/v1/<path>` thành `/v1/<path>`; gateway giữ bảng tiền tố → service trong values ở `gitops` ([ticket 18](../.scratch/architecture-g0-g1/issues/18-gateway-g1.md#answer)).
 - **Timeout ở gateway**: chung cho mọi route, connect 2s, read 10s, quá thì 504 Problem Details. Không retry, không circuit breaker ở G1.
-- **Contract-first**: mỗi service một `openapi/<service>.yaml` trong `contracts`. Không có API nội bộ riêng; F3.3c gọi đúng endpoint công khai "Đặt số tồn".
-- **Lỗi**: Problem Details (RFC 9457) bằng `ProblemDetail` của Spring. Lỗi HTTP chung có `type: about:blank`; lỗi nghiệp vụ có `type: urn:commerce-hub:problem:<code>` kèm extension `code`. Mọi lỗi có `traceId`; lỗi validate có `errors[]`. Danh mục `code` nằm trong `contracts/openapi`.
+- **Code-first** (sửa 2026-11-24, [ADR-0019](../adr/0019-no-contracts-repo.md)): controller và DTO viết tay trong service, không có OpenAPI trong `contracts`; test HTTP kiểm JSON bằng JsonPath trên tên field. Không có API nội bộ riêng; F3.3c gọi đúng endpoint công khai "Đặt số tồn".
+- **Lỗi**: Problem Details (RFC 9457) bằng `ProblemDetail` của Spring. Lỗi HTTP chung có `type: about:blank`; lỗi nghiệp vụ có `type: urn:commerce-hub:problem:<code>` kèm extension `code`. Mọi lỗi có `traceId`; lỗi validate có `errors[]`. Danh mục `code` nằm trong từng service (~~`contracts/openapi`~~, [ADR-0019](../adr/0019-no-contracts-repo.md)).
 - **Phân trang**: keyset, `?cursor=&limit=`, trả `nextCursor` opaque (base64url của JSON `{v:1, k:[…, id]}`, không ký). `limit` mặc định 50, tối đa 200.
 - **`Idempotency-Key`** cho `POST` tạo mới: lưu ở bảng `idempotency_key` của từng service (có RLS), cùng transaction với thao tác, giữ 24 giờ. Cùng key khác body trả 422, đang xử lý trả 409.
 - **Optimistic locking**: `ETag` mạnh `"<version>"`; `PUT`/`PATCH`/`DELETE` bắt buộc `If-Match`, thiếu trả 428, lệch trả 412.
@@ -152,8 +152,8 @@ Hướng instrument trên là đề xuất của [ticket 01](../.scratch/archite
 Quyết định: ticket [11](../.scratch/architecture-g0-g1/issues/11-service-template.md#answer), [ADR-0001](../adr/0001-polyrepo.md), [ADR-0006](../adr/0006-public-repos-on-personal-account.md). Checklist: [ci-cd.md](../standards/ci-cd.md), [helm-chart.md](../standards/helm-chart.md), [gitops-argocd.md](../standards/gitops-argocd.md), [container-image.md](../standards/container-image.md), [zero-downtime.md](../standards/zero-downtime.md).
 
 - **Build**: Gradle 9 (Groovy DSL), wrapper trong từng repo. Service là project do Spring Initializr sinh, giữ mặc định ([spring-service.md](../standards/spring-service.md), [ADR-0018](../adr/0018-self-contained-services-no-shared-library-yet.md)).
-- **Template**: repo `services/hello`, cũng là service "hello" của G0. Chỉ giữ phần mỏng (skeleton package, `application.yaml`, Dockerfile, `settings.gradle`, workflow gọi reusable workflow). Thứ cần đồng bộ về sau đi qua artifact có version: chart `app`, reusable workflow, `contracts`. Code chung trong template (Problem Details, UUIDv7) được chép khi tạo service, không tự đồng bộ.
-- **Artifact**: `contracts` (Maven và npm) publish lên GitHub Packages từ tag `vX.Y.Z`, SemVer. Không repo nào dùng SNAPSHOT của repo khác. Dependabot bump version.
+- **Template**: repo `services/hello`, cũng là service "hello" của G0. Chỉ giữ phần mỏng (skeleton package, `application.yaml`, Dockerfile, `settings.gradle`, workflow gọi reusable workflow). Thứ cần đồng bộ về sau đi qua artifact có version: chart `app`, reusable workflow (~~`contracts`~~, [ADR-0019](../adr/0019-no-contracts-repo.md)). Code chung trong template (Problem Details, UUIDv7) được chép khi tạo service, không tự đồng bộ.
+- **Artifact**: ~~`contracts` (Maven và npm) publish lên GitHub Packages từ tag `vX.Y.Z`, SemVer. Không repo nào dùng SNAPSHOT của repo khác. Dependabot bump version.~~ (Sửa 2026-11-24, [ADR-0019](../adr/0019-no-contracts-repo.md)) Artifact có version là image (tag SHA), chart `app` và reusable workflow của `platform` (SemVer); không có package Maven hay npm nào.
 - **CI**: GitHub Actions trên GitHub-hosted runner; mỗi repo gọi reusable workflow trong `platform`. Push image lên registry ở `gw` qua `tailscale/github-action`. Workflow cho PR từ fork không nhận secret.
 - **Chart `app`**: một chart cho mọi workload (service Spring, `marketplace-sim`, `seller-web`). Phần JVM dưới `jvm.enabled` (`MaxRAMPercentage`, lab ghi đè 60 cho pod 512 Mi, đo ở G0). Mount trust bundle của lab (8.13). Bật bằng values: port thứ hai, `HTTPRoute` nhiều hostname gắn vào `edge`, Job migrate `PreSync`, Sealed Secret, NetworkPolicy. Mặc định `replicaCount: 2`; values lab đặt 1 ([ADR-0004](../adr/0004-single-instance-by-default-on-homelab.md)).
 - **GitOps**: repo service chỉ tạo image; `gitops` quyết định chạy ở đâu và cấu hình gì. Argo CD kéo chart từ registry và values từ `gitops` (multiple sources). CI cập nhật image tag trong `gitops`.
@@ -162,14 +162,14 @@ Quyết định: ticket [11](../.scratch/architecture-g0-g1/issues/11-service-te
 
 Quyết định: ticket [13](../.scratch/architecture-g0-g1/issues/13-dev-loop.md#answer).
 
-- **Hạ tầng dev** là `platform/compose` trên Mac: Kafka KRaft 1 broker, Apicurio 3, PostgreSQL 18 (mỗi service một database kèm bốn role như ở lab), PgBouncer `transaction`, Keycloak. Service chạy trên host với profile `local`. Mac không bao giờ ghi vào hạ tầng lab.
+- **Hạ tầng dev** là `platform/compose` trên Mac: Kafka KRaft 1 broker, ~~Apicurio 3~~ (bỏ, [ADR-0019](../adr/0019-no-contracts-repo.md)), PostgreSQL 18 (mỗi service một database kèm bốn role như ở lab), PgBouncer `transaction`, Keycloak. Service chạy trên host với profile `local`. Mac không bao giờ ghi vào hạ tầng lab.
 - **Config lấy từ `gitops`**: hai container init đọc bản checkout `../gitops` để áp realm `commerce-hub` và tạo topic giống lab. Đây là lệch [ADR-0001](../adr/0001-polyrepo.md) có chủ đích, chỉ ở dev, ghi lý do ở README của compose.
 - **Dữ liệu khởi đầu**: profile `local` của `workspace` tạo idempotent một Account dev, một Workspace, một Member Owner.
 - **Phạm vi trên Mac**: một service cộng các service lân cận trực tiếp. Luồng đầy đủ (simulator → connector → catalog/inventory/order → seller-web) kiểm trên lab sau khi deploy.
 - **Test tích hợp**: Testcontainers chạy cả trên Mac lẫn CI bằng cùng `./gradlew check`; cấu hình nằm trong test của từng service. Tag image ghim cùng major.minor với production, kèm comment trỏ tới version trong `gitops`.
 - **Test chart**: `ct install` chạy trên kind trong job CI, dựng rồi bỏ mỗi lần.
 - **Chiến lược test G1** (ticket [19](../.scratch/architecture-g0-g1/issues/19-g1-test-strategy.md#answer), có bảng phân tầng đầy đủ): mỗi test đặt ở tầng thấp nhất chứng minh được điều nó cần chứng minh.
-  - **Contract**: không dùng Pact ở G0–G1. Đây là lệch C14 và Charter mục 5 có chủ đích, vì G1 chỉ có một lệnh REST giữa service (F3.3c). REST kiểm bằng `oasdiff breaking` ở CI của `contracts`, cộng test kiểm request/response thật so với OpenAPI ở service. Event kiểm tương thích `BACKWARD`, cộng integration test dùng serde Avro thật với Apicurio. Xem lại Pact khi có REST giữa service mà schema không diễn tả hết.
+  - **Contract**: ~~không dùng Pact ở G0–G1. Đây là lệch C14 và Charter mục 5 có chủ đích, vì G1 chỉ có một lệnh REST giữa service (F3.3c). REST kiểm bằng `oasdiff breaking` ở CI của `contracts`, cộng test kiểm request/response thật so với OpenAPI ở service. Event kiểm tương thích `BACKWARD`, cộng integration test dùng serde Avro thật với Apicurio. Xem lại Pact khi có REST giữa service mà schema không diễn tả hết.~~ (Sửa 2026-11-24, [ADR-0019](../adr/0019-no-contracts-repo.md)) Không kiểm tương thích giữa service: không Pact, không `oasdiff`, không Schema Registry; contract test của C14 nằm ngoài phạm vi. REST kiểm bằng test HTTP của từng service (JsonPath trên tên field). Consumer event có integration test với JSON mẫu theo record đã chép từ producer.
   - **Simulator**: bộ test tuân thủ SIM-01..08 nằm trong `marketplace-sim`, fixture chép nguyên văn ví dụ tài liệu Shopee kèm URL và ngày tra. Connector test adapter bằng WireMock dựng từ bản chép riêng, không lấy simulator làm contract. Hai bên chạy thật với nhau chỉ trong e2e.
   - **e2e**: repo `e2e`, Playwright (TypeScript), chạy trên GitHub-hosted runner vào lab qua Tailscale. Kích hoạt bằng `repository_dispatch` từ `update-gitops`, rồi chờ bằng `argocd app wait` (tài khoản chỉ đọc), cộng lịch hằng đêm. Mỗi lần chạy tạo Account, Workspace, Shop riêng; cuối lần chạy cho token Shop hết hạn trên simulator để Shop thành `Disconnected`. Không tự rollback.
   - **Không có ở G1**: test tải, chaos (N1–N5 từ G2, N16 từ G4). AC F2.4a "kill pod ở 60%" kiểm ở integration bằng cách dừng worker đột ngột.
