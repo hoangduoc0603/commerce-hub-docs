@@ -89,7 +89,7 @@ Duyệt ngày 2026-11-25. Làm theo `/huong-dan`: chủ repo là driver; bước
 - `platform`: [platform#8](https://github.com/hoangduoc0603/commerce-hub-platform/pull/8) (`14f4646`, chart 0.3.0), [platform#9](https://github.com/hoangduoc0603/commerce-hub-platform/pull/9) (`509560f`, chart 0.3.1 theo review, digest `sha256:5293e9a6…65c8`).
 - `hello`: [hello#6](https://github.com/hoangduoc0603/commerce-hub-hello/pull/6) (merge `g0-26`, `4901a65`), [hello#7](https://github.com/hoangduoc0603/commerce-hub-hello/pull/7) (V2, `aef028f`), [hello#8](https://github.com/hoangduoc0603/commerce-hub-hello/pull/8) (V3 lỗi cố ý, `edb0ce4`), [hello#9](https://github.com/hoangduoc0603/commerce-hub-hello/pull/9) (gỡ V3, `b28780d`).
 - `gitops`: `4a7f854` (chart 0.3.0, SealedSecret, DB), `daeb43c` (bật Job), `da34083` (rollback V3), `ae6f0e4` (chart 0.3.1); còn lại là commit digest của bot. Lab chạy `aef028f` (V1, V2), chart 0.3.1, `Synced Healthy`.
-- `docs`: chưa commit (xem đề xuất commit trong phiên làm việc).
+- `docs`: `0737bab` (ticket, ADR-0020, chuẩn, runbook, bản ghi); trước đó `fbef6bf` commit riêng phần G0-24 còn treo, kể cả 3 dòng G0-24 của `gitops-argocd.md`.
 - Ma trận truy vết: không có dòng tương ứng (ticket hạ tầng của `hello`, như G0-24, G0-26).
 - Chuyển cho ticket sau:
   - G0-30 (quan sát): Job migrate cần OTel/log JSON thì thêm vào `migration.env` (Job không nạp ConfigMap runtime). Đo memory đỉnh của pod migrate (sống 1 s, `kubectl top` không kịp).
