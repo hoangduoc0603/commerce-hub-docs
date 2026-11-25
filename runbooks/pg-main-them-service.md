@@ -139,7 +139,28 @@ kubectl get secret -n postgres pg-main-<role-có-gạch-ngang> -o json \
   | kubeseal --format yaml > <đường-dẫn-trong-chart-hoặc-app-của-service>.sealedsecret.yaml
 ```
 
-Đã thử pipeline (không ghi file) ngày 2026-11-15: ra SealedSecret đúng tên, namespace, `kubernetes.io/basic-auth`. Dùng thật lần đầu ở G0-27 (`hello`) và ticket 10 (Keycloak, `spec.db.usernameSecret`/`passwordSecret`).
+Đã thử pipeline (không ghi file) ngày 2026-11-15: ra SealedSecret đúng tên, namespace, `kubernetes.io/basic-auth`. Ticket 10 (Keycloak, `spec.db.usernameSecret`/`passwordSecret`) dùng dạng file này.
+
+**Service dùng chart `app`** (từ 0.3.0, dùng thật ở [G0-27](../.scratch/g0-platform/issues/27-hello-pg-main-presync.md) ngày 2026-11-25): bản sao nằm trong `envs/lab/<svc>/values.yaml` dưới `sealedSecrets.<tên>.encryptedData`, không phải file riêng. Lấy riêng `encryptedData` rồi dán vào values:
+
+```bash
+seal_copy() {  # $1 Secret ở postgres, $2 tên ở service, $3 namespace service
+  kubectl get secret -n postgres "$1" -o json   | jq --arg n "$2" --arg ns "$3" '{apiVersion: "v1", kind: "Secret", type, metadata: {name: $n, namespace: $ns}, data}'   | kubeseal --format yaml | yq '.spec.encryptedData'
+}
+seal_copy pg-main-hello-app hello-db-app hello
+```
+
+Quy ước tên ở service: `<svc>-db-app` (runtime, SealedSecret thường) và `<svc>-db-migrator` (Job migrate, `preSync: true`). Kiểm trước khi push, không cần đụng plaintext: render rồi `kubeseal --validate`:
+
+```bash
+helm template <svc> oci://ghcr.io/hoangduoc0603/charts/app --version 0.3.0 -n <svc> -f envs/lab/<svc>/values.yaml -s templates/sealedsecret.yaml   | yq 'select(.metadata.name == "<svc>-db-app") | .metadata.namespace = "<svc>"' | kubeseal --validate
+```
+
+Sau sync, so bản sao bằng **hash**, không so nội dung: `diff` in nguyên `.data` (có password base64) khi một bên chưa tồn tại, đã xảy ra ở G0-27.
+
+```bash
+[ "$(kubectl -n postgres get secret pg-main-hello-app -o jsonpath='{.data}' | shasum -a 256)" = "$(kubectl -n hello get secret hello-db-app -o jsonpath='{.data}' | shasum -a 256)" ] && echo khớp
+```
 
 ## Đổi mật khẩu
 
@@ -157,6 +178,8 @@ openssl rand -hex 32 | tr -d '\n' \
   | tee >(seal pg-main-<role-có-gạch-ngang> postgres <role> > infra/pg-main/pg-main-<role-có-gạch-ngang>.sealedsecret.yaml) \
   | seal <tên-ở-service> <ns-service> <role> > <đường-dẫn-bản-sao>.sealedsecret.yaml
 ```
+
+Service dùng chart `app` thì bản sao không phải file mà là `encryptedData` trong values: thay vế sau của `tee` bằng `| seal <svc>-db-app <ns-service> <role> | yq '.spec.encryptedData'`, dán vào `sealedSecrets.<svc>-db-app.encryptedData` và tăng `secretRevision` (pod phải khởi động lại mới đọc Secret mới). Bản sao không cần nhãn `cnpg.io/reload` nhưng có cũng vô hại.
 
 Sau đó thêm lại annotation wave và header cho file ở `postgres` (như mục 2), rồi commit cả hai file cùng lúc. Pod service đang giữ kết nối cũ vẫn chạy (PostgreSQL chỉ kiểm mật khẩu lúc nối); restart pod để chắc mật khẩu mới dùng được.
 
