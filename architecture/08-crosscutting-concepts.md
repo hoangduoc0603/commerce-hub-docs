@@ -104,7 +104,7 @@ Quyết định: ticket [09](../.scratch/architecture-g0-g1/issues/09-g1-contrac
 
 ## 8.7 Quy ước REST
 
-Quyết định: ticket [09](../.scratch/architecture-g0-g1/issues/09-g1-contracts.md#answer), [11](../.scratch/architecture-g0-g1/issues/11-service-template.md#answer), [18](../.scratch/architecture-g0-g1/issues/18-gateway-g1.md#answer). Cài đặt trong từng service, chép từ template `hello` ([ADR-0018](../adr/0018-self-contained-services-no-shared-library-yet.md)).
+Quyết định: ticket [09](../.scratch/architecture-g0-g1/issues/09-g1-contracts.md#answer), [11](../.scratch/architecture-g0-g1/issues/11-service-template.md#answer), [18](../.scratch/architecture-g0-g1/issues/18-gateway-g1.md#answer). Cài đặt trong từng service, chép từ template `hello` ([ADR-0018](../adr/0018-self-contained-services-no-shared-library-yet.md)). Checklist: [rest-api.md](../standards/rest-api.md) (phần lỗi; cursor, `Idempotency-Key`, `ETag` bổ sung ở G1).
 
 - **Đường dẫn**: theo tài nguyên, có tiền tố `/v1` (`/v1/orders`, `/v1/master-skus`…), không có tên service. BFF chuyển `/api/v1/<path>` thành `/v1/<path>`; gateway giữ bảng tiền tố → service trong values ở `gitops` ([ticket 18](../.scratch/architecture-g0-g1/issues/18-gateway-g1.md#answer)).
 - **Timeout ở gateway**: chung cho mọi route, connect 2s, read 10s, quá thì 504 Problem Details. Không retry, không circuit breaker ở G1.

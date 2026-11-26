@@ -23,3 +23,10 @@ Spec: [G0](../spec.md)
 - [ ] Dashboard "Service overview" có dữ liệu của `hello`; `count({workspace_id!=""})` trả rỗng.
 - [ ] Chạy k6 ngắn với `sampling.probability` 1.0 và 0.0: ghi chênh lệch p99 và CPU. k6 chạy trên Mac; nếu k6 chưa tin root CA của lab thì dùng `--insecure-skip-tls-verify` và ghi lại (kiểm k6 đọc Keychain đã hoãn tới G7, 2026-11-15).
 - [ ] Ma trận truy vết, dòng N12: G0 xong phần khung, kèm link dashboard và một trace ID mẫu.
+
+## Ghi chú từ G0-28 (2026-11-26)
+
+- `hello` đã có `spring-boot-starter-opentelemetry`, với `management.tracing.export.otlp.enabled: false` và `management.otlp.metrics.export.enabled: false` ([G0-28](28-hello-problem-details.md)). Ticket này chỉ cần bật export span; giữ tắt `OtlpMeterRegistry`.
+- Sampling mặc định của Boot 4.1.2 là `management.tracing.sampling.probability: 0.1` (metadata của jar). Problem Details luôn trả `traceId`, nên nếu không đặt `1.0` (head sampling 100% theo [observability.md](../../../standards/observability.md)) thì khoảng 90% `traceId` dẫn tới trace không có trên Tempo.
+- Bật export bằng property hoặc bằng biến `OTEL_*`, chọn một cách. Biến `OTEL_TRACES_EXPORTER` đè cả yaml lẫn `-D` (đã tái hiện ở G0-28). Kiểm env của pod bằng `kubectl -n hello exec deploy/hello -- env | grep OTEL`.
+
