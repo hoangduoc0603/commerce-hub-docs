@@ -19,3 +19,8 @@ Mọi route của `hello` bắt buộc JWT của realm `commerce-hub`: chỉ RS2
 - [ ] Trên lab: token client credentials của client test tạo được lời chào; không token thì 401.
 - [ ] Bỏ mount truststore trong values thì `hello` không tải được JWKS (lỗi `PKIX` trong log); bật lại thì chạy.
 - ~~OpenAPI trong `contracts` khai bảo mật bearer khớp hành vi.~~ Bỏ (2026-11-24, [ADR-0019](../../../adr/0019-no-contracts-repo.md)).
+
+## Chuyển từ G0-10
+
+- NetworkPolicy của Keycloak (`spec.networkPolicy.http` trong `gitops/infra/keycloak/keycloak.yaml`) chỉ cho pod Envoy của `edge` và pod trong namespace `keycloak` vào cổng 8080. Đi qua `https://auth.lab.internal` (truststore, như tiêu chí ở trên) thì không cần đổi gì. Nếu đặt `jwk-set-uri` nội bộ (`http://keycloak-service.keycloak.svc:8080/realms/commerce-hub/protocol/openid-connect/certs`, `keycloak.md` mục Resource server khuyên) thì phải thêm namespace `hello` vào danh sách đó trong cùng commit, nếu không `hello` timeout khi tải JWKS. Đo 2026-11-27: pod ở namespace khác gọi 8080 thì timeout ([bản ghi G0-10](../../../experiments/2026-11-g0-10-keycloak.md)).
+- Discovery của `commerce-hub` đã có `issuer` `https://auth.lab.internal/realms/commerce-hub`; dòng "Issuer đúng" của `keycloak.md` còn phần so với `issuer-uri` của `hello`.

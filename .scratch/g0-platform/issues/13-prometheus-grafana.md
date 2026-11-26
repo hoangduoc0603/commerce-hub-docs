@@ -32,3 +32,8 @@ Tiêu chí hoãn tới G7:
 - [ ] Sửa một dashboard trên UI rồi sync lại thì bị ghi đè bằng bản trong Git.
 - [ ] `prometheus_tsdb_head_series` ghi vào bản ghi thí nghiệm G0 làm mốc.
 - [ ] Prometheus và Alertmanager không có route trên `edge` (chỉ `port-forward`).
+
+## Chuyển từ G0-10
+
+- Keycloak đã bật `metrics-enabled`, `event-metrics-user-enabled`, `http-metrics-histograms-enabled` trên cổng 9000 của Service `keycloak-service` (namespace `keycloak`). Ngày 2026-11-27 `/metrics` có 1 649 series, gồm `keycloak_user_events_total{error,event,realm}` và 414 bucket `http_server_requests_seconds` ([bản ghi G0-10](../../../experiments/2026-11-g0-10-keycloak.md)). Tính vào ngân sách cardinality.
+- Việc còn lại thuộc ticket này: (1) ServiceMonitor cho Keycloak. Operator tự tạo khi có CRD ServiceMonitor ≥ v0.72.0 (`spec.serviceMonitor` của CR); kiểm lại sau khi cài Prometheus Operator. (2) Giới hạn cổng 9000 chỉ cho namespace `observability`: đặt `spec.networkPolicy.management` trong `gitops/infra/keycloak/keycloak.yaml`. Hiện cổng này mở cho mọi pod. Probe của kubelet chạy trên 9000, nên sau khi đổi phải kiểm `keycloak-0` vẫn Ready. Checklist NetworkPolicy của `keycloak.md` để chưa tick tới khi xong.

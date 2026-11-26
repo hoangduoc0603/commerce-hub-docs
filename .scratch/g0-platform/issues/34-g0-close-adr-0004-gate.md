@@ -47,3 +47,8 @@ Tiêu chí hoãn tới G7:
 ## Chuyển từ G0-05
 
 - RAM lúc rảnh (2026-11-14): controller Envoy Gateway 56/256 Mi, Envoy 21/128 Mi, **shutdown-manager 23/32 Mi** (đã thêm `GOMEMLIMIT` 28MiB). Đo lại trong lần đo `kubectl top` của ticket này (theo dõi 24 giờ sang G7); nếu shutdown-manager OOMKilled thì nâng limit và sửa bảng ADR-0004.
+
+## Chuyển từ G0-10
+
+- Dòng "Tài nguyên" trong bảng "Bằng chứng cần có" của `keycloak.md` thuộc G0 (spec G0, mục Testing) nhưng G0-10 chưa đo: `kubectl top pod -n keycloak` khi chạy k6 đăng nhập 5 lượt/s trong 10 phút. Đạt khi không OOMKilled, ghi RAM và CPU thật, so với sizing (1 vCPU cho khoảng 15 lượt đăng nhập mật khẩu/s); kiểm `http-max-queued-requests=100` (giá trị khởi đầu) có trả 503 khi quá tải không.
+- RAM lúc rảnh (2026-11-27, [bản ghi G0-10](../../../experiments/2026-11-g0-10-keycloak.md)): `keycloak-0` 508–591 Mi trên request = limit 1 536 Mi; operator 205–226 Mi trên 450 Mi. Bảng RAM của ADR-0004 ghi "Keycloak 1 instance + operator ~2 GB"; request thật là 1 986 Mi.
