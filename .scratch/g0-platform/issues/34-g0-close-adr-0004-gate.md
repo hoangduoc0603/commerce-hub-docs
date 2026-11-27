@@ -52,3 +52,7 @@ Tiêu chí hoãn tới G7:
 
 - Dòng "Tài nguyên" trong bảng "Bằng chứng cần có" của `keycloak.md` thuộc G0 (spec G0, mục Testing) nhưng G0-10 chưa đo: `kubectl top pod -n keycloak` khi chạy k6 đăng nhập 5 lượt/s trong 10 phút. Đạt khi không OOMKilled, ghi RAM và CPU thật, so với sizing (1 vCPU cho khoảng 15 lượt đăng nhập mật khẩu/s); kiểm `http-max-queued-requests=100` (giá trị khởi đầu) có trả 503 khi quá tải không.
 - RAM lúc rảnh (2026-11-27, [bản ghi G0-10](../../../experiments/2026-11-g0-10-keycloak.md)): `keycloak-0` 508–591 Mi trên request = limit 1 536 Mi; operator 205–226 Mi trên 450 Mi. Bảng RAM của ADR-0004 ghi "Keycloak 1 instance + operator ~2 GB"; request thật là 1 986 Mi.
+
+## Chuyển từ G0-11
+
+- Mailpit chưa cài trên `gw` (2026-11-27 chỉ có dnsmasq; `platform/docs/homelab-hyperv.md` mục 8.9 mô tả cách cài). Chủ repo bỏ qua tiêu chí "email thử tới Mailpit, đo RAM Mailpit" ở G0-11. Story 83 (RAM của Mailpit trên `gw`) cần Mailpit chạy trước. Kiểm gửi email: `PUT /admin/realms/commerce-hub/users/{id}/execute-actions-email` với `["VERIFY_EMAIL"]` cho một user thử có email, rồi `curl -s http://10.20.0.5:8025/api/v1/messages`. Không dùng nút "Test connection" của realm bằng client service account: endpoint đó gửi tới email của admin đang đăng nhập.

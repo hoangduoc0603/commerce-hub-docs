@@ -21,3 +21,9 @@ Spec: [G0](../spec.md)
 - [ ] Job so tag đỏ khi cố ý đổi minor của PostgreSQL trong compose.
 - [ ] Đo RAM của compose (và compose cộng `hello`) trên Mac, ghi vào bản ghi thí nghiệm.
 - [ ] `docker compose down -v` reset sạch.
+
+## Chuyển từ G0-11
+
+- Realm: `gitops/infra/keycloak/realm/commerce-hub.yaml`. Init keycloak-config-cli trong compose dùng cùng image `adorsys/keycloak-config-cli:6.6.0-26.8.1` (ghim digest như `gitops/infra/keycloak/keycloak-config-cli.yaml`) và các biến của Job lab: `IMPORT_CACHE_ENABLED=false`, `IMPORT_VARSUBSTITUTION_ENABLED=true`, `SMOKE_TEST_CLIENT_SECRET` (giá trị dev trong `.env.example`). Thiếu biến này thì công cụ dừng (`undefined-is-error`).
+- Ở compose, đăng nhập công cụ bằng admin bootstrap qua password grant của `admin-cli` là đủ: `admin-cli` có sẵn scope `kc-admin-api` mà Keycloak 26.8.2 bắt buộc cho admin API, và có `manage-realm` trên `master` nên không cần `KEYCLOAK_SKIPSERVERINFO`. Lab dùng client service account riêng (runbook `keycloak-admin.md`), vì ở lab không để mật khẩu admin trong cụm.
+- SMTP trong file trỏ `10.20.0.5:1025` (Mailpit trên `gw`). Ở compose, nếu muốn kiểm email thì thêm một service Mailpit và ghi đè `smtpServer.host` bằng biến; nếu không thì chỉ là cấu hình không dùng tới.

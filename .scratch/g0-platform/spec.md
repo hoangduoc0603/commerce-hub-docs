@@ -206,7 +206,7 @@ Chốt 2026-11-15 với chủ repo. Đây là nơi duy nhất ghi thứ tự; ti
 - **Mục tiêu là code hệ thống.** Dựng khung `hello`, đưa lên lab sớm, rồi thêm code dần; mỗi tính năng đi qua đường deploy đã chạy, nên lỗi tích hợp lộ ra khi `hello` còn ít thứ để hỏng.
 - **Hạ tầng làm khi code cần tới**: mỗi ticket hạ tầng đứng ngay trước ticket code dùng nó.
 
-Đã xong: 01–08, 17, 18 (`service-kit`, thôi dùng từ 2026-11-15), 23. Hoãn: 09, 12, 31, 33 (G7); 15, 25 (G1). Bỏ (`wontfix`, 2026-11-24, [ADR-0019](../../adr/0019-no-contracts-repo.md)): 16, 19, 20.
+Đã xong: 01–08, 10, 11 (tiêu chí email tới Mailpit bỏ qua, chuyển sang 34), 17, 18 (`service-kit`, thôi dùng từ 2026-11-15), 23. Hoãn: 09, 12, 31, 33 (G7); 15, 25 (G1). Bỏ (`wontfix`, 2026-11-24, [ADR-0019](../../adr/0019-no-contracts-repo.md)): 16, 19, 20.
 
 | # | Ticket | `hello` có thêm gì | Chặn bởi |
 |---|---|---|---|
