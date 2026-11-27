@@ -1,6 +1,6 @@
 # 29: `hello` bắt buộc JWT
 
-Status: ready-for-human
+Status: resolved
 Blocked by: 11, 27, 28
 Repos: services/hello, gitops, docs (bỏ `libs/service-kit` ngày 2026-11-15)
 Spec: [G0](../spec.md)
@@ -15,9 +15,9 @@ Mọi route của `hello` bắt buộc JWT của realm `commerce-hub`: chỉ RS2
 
 ## Tiêu chí nghiệm thu
 
-- [ ] Test tự động (JWK giả): không token, sai `aud`, hết hạn, realm khác, ký bằng khóa lạ đều trả 401 Problem Details.
-- [ ] Trên lab: token client credentials của client test tạo được lời chào; không token thì 401.
-- [ ] Bỏ mount truststore trong values thì `hello` không tải được JWKS (lỗi `PKIX` trong log); bật lại thì chạy.
+- [x] Test tự động (JWK giả): không token, sai `aud`, hết hạn, realm khác, ký bằng khóa lạ đều trả 401 Problem Details. `JwtAuthenticationTests` (bước 3, 4): thêm khóa lạ cùng `kid` và HS256 ký bằng public key; xóa `audiences` thì case sai `aud` đỏ.
+- [x] Trên lab: token client credentials của client test tạo được lời chào; không token thì 401. Bước 5 (image `405c2ef`), lặp lại trên `0b969eb`: POST `201`, không token `401` Problem Details có `traceId`.
+- [x] Bỏ mount truststore trong values thì `hello` không tải được JWKS (lỗi `PKIX` trong log); bật lại thì chạy. Bước 6 và 6b: log `PKIX path building failed`; client nhận `401` qua `/error` (bước 6), sửa thành `503` có `traceId` (bước 6b); bật lại `201`.
 - ~~OpenAPI trong `contracts` khai bảo mật bearer khớp hành vi.~~ Bỏ (2026-11-24, [ADR-0019](../../../adr/0019-no-contracts-repo.md)).
 
 ## Chuyển từ G0-10
@@ -61,4 +61,20 @@ Duyệt 2026-11-27. Quyết định khi lập lộ trình:
   - Làm trên lab 2026-11-27 (Claude làm khi được giao). Gitops `84a4870` tắt `trust` → pod mới, `JAVA_TOOL_OPTIONS` chỉ còn `-XX:MaxRAMPercentage=60 -XX:ActiveProcessorCount=2`. GET và POST có token `smoke-test`: `HTTP/2 401`, `www-authenticate: Bearer`, `{"detail":"Bearer token required","instance":"/error",…}`. Log: ERROR `Servlet.service() for servlet [dispatcherServlet] … threw exception` với `AuthenticationServiceException … (certificate_unknown) PKIX path building failed`, trường trace trống. Gitops `b82b192` gỡ khối `trust` (về mặc định chart) → cờ truststore trở lại, POST → `201`. Argo CD Synced Healthy cả hai lần. Tiêu chí 3 đạt; status sai (401 thay vì 5xx) xử lý ở bước 6b.
 - [x] 6b. (Thêm 2026-11-27 sau số đo bước 6, chủ repo duyệt.) Không tải được JWKS → `503` Problem Details có `traceId`, không `WWW-Authenticate`, log ERROR cùng `traceId`. Test đỏ trên Tomcat thật (JWKS giả ném `SSLHandshakeException`) → failure handler của `BearerTokenAuthenticationFilter` không ném lại (`withObjectPostProcessor`) → handler `AuthenticationServiceException` trong `ApiExceptionHandler`. Kiểm: test xanh; lặp bước 6 trên lab ra `503`.
   - Làm 2026-11-27 (Claude làm khi được giao). `JwksUnavailableTests` đỏ `expected: 503 but was: 401`, xanh sau khi sửa; `./gradlew test` 58 test xanh. PR hello#12 CI xanh, merge rebase, image `1431842` (bot `004b22e`). Lab: gitops `b645379` tắt `trust` → `HTTP/2 503`, `{"detail":"Token verification unavailable",…,"traceId":"ece0f54b…"}`, không `www-authenticate`; log `ERROR [ece0f54b…-45fd50b8…] ApiExceptionHandler : Cannot verify bearer token` kèm `(certificate_unknown) PKIX path building failed`. Gitops `3f8da95` gỡ khối `trust` → POST có token `201`, không token `401 Bearer`. Argo CD Synced Healthy.
-- [ ] 7. Kết ticket theo `docs/agents/huong-dan.md` mục 4.
+- [x] 7. Kết ticket theo `docs/agents/huong-dan.md` mục 4.
+  - Làm 2026-11-27 (Claude làm khi được giao). `./gradlew clean test` trên `main`: 58 test xanh. Code-review hai trục (chuẩn, ticket) từ `2745b06`; sửa 6 điểm ở PR hello#13 (`0b969eb`):
+    - Starter `spring-boot-starter-oauth2-resource-server` đã deprecated ở Boot 4.1.2, đổi sang `spring-boot-starter-security-oauth2-resource-server` cùng test starter. Mẫu bước 1 chép tên kiểu Boot 3.
+    - Ba comment sai hành vi: `withDefaults()` có đổi `scope` thành `SCOPE_*` (chỉ không đổi realm role); `build()` không throws là do Spring Security; case HS256 bị chặn bởi RS256 mặc định, không nhờ dòng `jws-algorithms`.
+    - `JwksUnavailableTests` kiểm thêm `$.title`, `$.status`, `$.detail` và ERROR, `traceId`, message trên cùng một dòng log.
+    - Comment tại chỗ: chưa có `accessDeniedHandler` vì G0 không có 403.
+    - Bỏ qua có lý do: hai cấu hình JWKS giả giống nhau (mới hai chỗ), `try`/`catch` `JOSEException` trong test, hai commit đã merge thiếu mã BR.
+  - CI `main` của `0b969eb` đỏ hai lần vì Maven Central trả `429 Too Many Requests` khi cache Gradle trống; chạy lại job lỗi thì xanh, không đổi code. Lab: Synced Healthy, POST `201`, không token `401`.
+  - Chuẩn (docs `ddbd201`): `keycloak.md` tick 4 dòng Resource server, ghi lệch Q1 (`jwk-set-uri` qua Gateway), dòng mới "JWKS hỏng trả 503", "Issuer đúng" và "Resource server" đạt; endpoint `/.well-known/oauth-protected-resource` (Security 7.1.2 luôn thêm, khai sai `tls_client_certificate_bound_access_tokens`) chốt ở G1. `rest-api.md` tick dòng "lỗi trong filter"; dòng mới: `/error` dự phòng không bao giờ hiện (ERROR dispatch bị chặn), chốt ở G1.
+  - Ma trận truy vết không đổi: ma trận theo yêu cầu chức năng từ G1; G0-29 chỉ dựng điều kiện tiên quyết cho BR-04 (biết ai đang gọi), cô lập Workspace là F1.1c ở G1.
+
+## Bài học
+
+- Thiếu `aud` là lỗ hổng thật, không phải chi tiết: mọi client cùng realm ký bằng cùng khóa và cùng `iss`, nên token của `account-console` (`aud: account`) gọi được API nếu không có `audiences`. Test "đổi đúng một điểm của token hợp lệ" cộng phép thử ngược (xóa dòng cấu hình thì đúng một case đỏ) chứng minh mỗi tiêu chí có dòng cấu hình canh nó; riêng RS256 là mặc định nên dòng `jws-algorithms` không có test canh.
+- Ba chỗ vấp chỉ lộ khi chạy thật: training run AOT trong Dockerfile khởi động app nên cũng cần `issuer-uri` giả (CI đỏ ở PR, lộ trình chỉ thử `bootRun` và jar); `-Djavax.net.ssl.trustStore` thay chứ không cộng `cacerts`; và lỗi tải JWKS bị Spring Security ném lại, Tomcat forward tới `/error`, lượt ERROR dispatch không có authentication nên ra 401. Dự đoán "500" trong lộ trình sai; đo trước rồi mới viết bài.
+- Câu chuyện phỏng vấn: "Khi Keycloak hoặc chứng chỉ hỏng, API của chúng tôi trả 401 như thể client quên token: client xin token liên tục, cảnh báo 5xx im lặng. Tôi tái hiện trên lab bằng cách gỡ truststore của pod, lần ra chuỗi rethrow → `/error` → ERROR dispatch bị chặn, rồi cho lỗi hạ tầng đi qua cùng entry point và trả 503 Problem Details có `traceId`, log ERROR cùng `traceId`. Test trên Tomcat thật đỏ `expected 503 but was 401` trước khi sửa; lab sau khi sửa: 503 khi gỡ truststore, 201 khi gắn lại."
+
