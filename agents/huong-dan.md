@@ -35,17 +35,20 @@ Trình bày dạng bảng: `# | Làm gì | Vì sao | Kiểm bằng`. Hỏi chủ
 
 Mỗi lượt trình bày một bước. Với mỗi bước, theo thứ tự:
 
-1. **Tổng quan**: bước này làm gì, để đạt mục đích gì (gắn với tiêu chí nghiệm thu hay rủi ro nào), và thay đổi nằm ở đâu (repo, file, object trong cụm). Vài dòng hoặc một bảng.
-2. **Khái niệm mới**: giải thích từ gốc, ngắn, rồi chỉ một nguồn chính để đọc thêm. Bỏ qua nếu bước không có khái niệm mới.
-3. **Cách làm**: từng thao tác theo thứ tự, mỗi thao tác kèm vì sao.
+1. **Tổng quan**: bước này làm gì và thay đổi nằm ở đâu (repo, file, object trong cụm). Vài dòng hoặc một bảng.
+2. **Ý nghĩa thực tiễn**: trong một module hay hệ thống production thật, việc này giải quyết vấn đề gì, thiếu nó thì chuyện gì xảy ra (ai bị ảnh hưởng, lỗi hay lỗ hổng nào). Gắn với tiêu chí nghiệm thu hay rủi ro của ticket.
+3. **Khái niệm cần học**: giải thích kỹ, từ gốc, đủ để chủ repo hiểu và tự dùng lại ở service khác sau này: khái niệm là gì, cơ chế chạy thế nào (ai gọi ai, theo thứ tự nào), khi nào dùng, bẫy thường gặp. Ví dụ ngắn khi giúp hiểu. Mỗi khái niệm chỉ một nguồn chính để đọc thêm. Bỏ qua nếu bước không có khái niệm mới.
+4. **Cách làm**: từng thao tác theo thứ tự. Mỗi thao tác nêu làm gì và **ý nghĩa của việc làm như vậy** (để đạt điều gì, bỏ đi thì sao), rồi mới tới mẫu.
    - Thao tác tạo hay sửa file (code, cấu hình, chart, manifest, workflow) có **mẫu đầy đủ**: chạy được với phiên bản đang dùng, comment giải thích mọi dòng không hiển nhiên (trường này làm gì, vì sao chọn giá trị này, bỏ đi thì sao). Đánh dấu rõ chỗ chủ repo phải tự điền hay tự quyết.
    - Bước có code theo nhịp red → green: mẫu test trước, chạy thấy đỏ, rồi mới tới mẫu code.
    - Lệnh chạy có kèm output mong đợi, hoặc dòng cần nhìn trong output.
    - Mẫu là thứ chủ repo đọc hiểu rồi tự gõ vào repo, không phải Claude ghi file hộ. Trước khi đưa mẫu, kiểm cú pháp và tên trường với docs đúng phiên bản (context7 hoặc trang chính thức); chỗ chưa kiểm được thì gắn nhãn **chưa xác minh**.
    - Artifact mức tối thiểu vẫn có mẫu và lý do, chỉ bớt phần so sánh phương án.
-4. **Phương án đã loại** và lý do.
-5. **Nguồn** chính thức đúng phiên bản: mục checklist trong `docs/standards/`, ADR, hoặc docs gốc.
-6. **Tự kiểm**: lệnh kiểm của bước và kết quả mong đợi.
+5. **Phương án đã loại** và lý do.
+6. **Nguồn** chính thức đúng phiên bản: mục checklist trong `docs/standards/`, ADR, hoặc docs gốc.
+7. **Tự kiểm**: lệnh kiểm của bước và kết quả mong đợi.
+
+Bài giảng chỉ chứa thứ chủ repo cần để hiểu và làm. Không kể quá trình Claude tự kiểm mẫu (đã chạy thử trên nhánh rồi hoàn tác, đo bằng test tạm, đường dẫn file diff hay file nháp): chỉ đưa kết luận đã kiểm, và chỗ chưa kiểm thì gắn **chưa xác minh**. Hành vi hiện tại của hệ thống (trước khi sửa) thể hiện qua output của test đỏ trong phần Cách làm, không thành mục riêng.
 
 Rồi:
 
