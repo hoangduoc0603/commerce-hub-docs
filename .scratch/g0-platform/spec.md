@@ -206,7 +206,7 @@ Chốt 2026-11-15 với chủ repo. Đây là nơi duy nhất ghi thứ tự; ti
 - **Mục tiêu là code hệ thống.** Dựng khung `hello`, đưa lên lab sớm, rồi thêm code dần; mỗi tính năng đi qua đường deploy đã chạy, nên lỗi tích hợp lộ ra khi `hello` còn ít thứ để hỏng.
 - **Hạ tầng làm khi code cần tới**: mỗi ticket hạ tầng đứng ngay trước ticket code dùng nó.
 
-Đã xong: 01–08, 10, 11 (tiêu chí email tới Mailpit bỏ qua, chuyển sang 34), 13, 17, 18 (`service-kit`, thôi dùng từ 2026-11-15), 21–24, 26–29 (sửa 2026-11-28 theo `Status:` của từng ticket). Hoãn: 09, 12, 31, 33 (G7); 15, 25 (G1). Bỏ (`wontfix`, 2026-11-24, [ADR-0019](../../adr/0019-no-contracts-repo.md)): 16, 19, 20.
+Đã xong: 01–08, 10, 11 (tiêu chí email tới Mailpit bỏ qua, chuyển sang 34), 13, 14, 17, 18 (`service-kit`, thôi dùng từ 2026-11-15), 21–24, 26–29 (sửa 2026-11-28 theo `Status:` của từng ticket). Hoãn: 09, 12, 31, 33 (G7); 15, 25 (G1). Bỏ (`wontfix`, 2026-11-24, [ADR-0019](../../adr/0019-no-contracts-repo.md)): 16, 19, 20.
 
 | # | Ticket | `hello` có thêm gì | Chặn bởi |
 |---|---|---|---|
@@ -298,7 +298,7 @@ Keycloak (10, 11) phải đứng trước 29: sau 29, mọi route của `hello` 
 - Theo [helm-chart.md](../../standards/helm-chart.md) và ticket 11: một chart cho mọi workload, publish OCI lên `10.20.0.5:5000/charts` với SemVer. Chart mặc định 2 replica; values lab đặt 1 (ADR-0004).
 - Values có JSON schema; digest image bắt buộc. Có `jvm.enabled` (mặc định `true`) đặt `JAVA_TOOL_OPTIONS` với `MaxRAMPercentage` chỉnh được và truststore của trust-manager; app Node đặt `NODE_EXTRA_CA_CERTS`.
 - Bật bằng values: `httpRoute.*` gắn vào `edge`; Job migrate `PreSync` (`hook-delete-policy: BeforeHookCreation`, không `ttlSecondsAfterFinished`); port thứ hai; SealedSecret; `secretRevision`.
-- Endpoint OTLP trỏ vào Collector cùng node, lấy IP node qua downward API.
+- Endpoint OTLP trỏ vào Collector cùng node: Service `otel-collector.observability.svc` với `internalTrafficPolicy: Local` (sửa 2026-11-28 theo G0-14 Q2; bỏ phương án IP node qua downward API và hostPort).
 - NetworkPolicy ingress theo danh sách cho phép; có route thì tự mở cho pod Envoy của `edge`. Egress mở mặc định, chỉ siết khi khai báo `egress.to`.
 - Pod Security "restricted", non-root, `readOnlyRootFilesystem`, PDB, `topologySpreadConstraints`, probe theo nhóm health của Actuator, preStop lớn hơn độ trễ gỡ endpoint đo được.
 - Kiểm: `helm lint --strict`, `kubeconform` với K8s 1.37, `ct install` trên kind trần trong CI. Biến thể `ci/` tắt Job `PreSync` và SealedSecret.

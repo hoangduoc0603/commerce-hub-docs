@@ -62,3 +62,9 @@ Tiêu chí hoãn tới G7:
 - RAM thành phần quan sát (2026-11-28, 25 phút sau reboot, [bản ghi G0 mục 10](../../../experiments/2026-11-g0.md)): tổng limit `observability` **2 256 Mi** so với 1 872 Mi trong bảng ticket kiến trúc 04. Lệch chính: Grafana 13 và hai sidecar 640 Mi thay vì 320 (224 + 2 × 48 OOMKilled lúc khởi động); hai config-reloader × 32 Mi không có trong bảng. Prometheus 693/1 024 Mi working set ở 96 293 series. Đo lại sau 24 giờ chạy nền rồi mới chốt ADR-0004. Phương án bớt 128 Mi: tắt sidecar datasources, khai datasource bằng file provisioning.
 - cainjector của cert-manager: 15–16 Mi sau khi tắt theo dõi CRD, APIService (trước đó 58/64 Mi và một lần SIGKILL khi áp CRD của Prometheus Operator).
 - Metric của etcd, scheduler, controller-manager, kube-proxy tắt (kubeadm nghe 127.0.0.1): Hoãn tới G7, nằm ngoài GitOps (static pod manifest, ConfigMap kube-proxy).
+
+## Chuyển từ G0-14
+
+- RAM (2026-11-28, tải 3 phút: 150 span/s, 450 dòng log/s, [bản ghi G0 mục 11](../../../experiments/2026-11-g0.md)): đỉnh Collector 110/192 Mi, Loki 151/512, Tempo 418/512 (heap về 91 MB sau 4 phút; tải G1 có thể vượt 512). 0 restart, 0 OOMKilled cho cả năm pod.
+- Grafana 384 Mi bị OOMKilled 5 lần trong 6 giờ chạy rỗi (RSS 260–370 Mi): G0-14 nâng 512 Mi, GOMEMLIMIT 460 MiB (gitops `e9ceb63`). Pod Grafana và hai sidecar nay 768 Mi so với ngân sách 320.
+- Tổng limit `observability` **3 984 Mi** so với khoảng 3 482 của ticket kiến trúc 04. Đo 24 giờ trước khi chốt ADR-0004; cân nhắc giới hạn ingest hoặc sampling cho Tempo ở tải G1.
