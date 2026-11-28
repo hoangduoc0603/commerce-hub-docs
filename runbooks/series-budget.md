@@ -2,6 +2,8 @@
 
 Alert `PrometheusSeriesBudgetExceeded` bắn khi `prometheus_tsdb_head_series` vượt 200 000 trong 30 phút.
 
+Alert `ServiceSeriesBudgetExceeded` (G0-30) bắn khi một pod service (target `container="app"`, `endpoint="management"`, tức ServiceMonitor của chart `app`) trả quá 5 000 sample mỗi lần scrape trong 30 phút. Chẩn đoán như dưới nhưng lọc theo namespace của pod trong alert: `topk(10, count by (__name__) ({namespace="<ns>", container="app"}))`.
+
 - Ticket: [G0-13](../.scratch/g0-platform/issues/13-prometheus-grafana.md) bước 4. Chuẩn: [observability.md, mục "Metric: tên, nhãn, cardinality"](../standards/observability.md). Rule: `gitops/infra/kube-prometheus-stack/prometheusrule-series-budget.yaml`.
 - Phiên bản: Prometheus v3.16.0 (chart `kube-prometheus-stack` 94.1.0), limit 1 Gi.
 - Docs gốc: [Prometheus – Naming: labels](https://prometheus.io/docs/practices/naming/#labels), [Prometheus – TSDB status API](https://prometheus.io/docs/prometheus/latest/querying/api/#tsdb-stats).
@@ -59,3 +61,4 @@ Không cần khởi động lại Prometheus: sửa nguồn là đủ.
 ## Mốc
 
 - 2026-11-27 (G0-13 bước 2–3, chưa có Alertmanager, Grafana, Keycloak): khoảng 78 000 series, apiserver chiếm khoảng 55 000. Số chốt ghi ở bước 8 của G0-13.
+- 2026-11-28 (G0-30): `hello` 396 sample mỗi lần scrape (454 trước khi tắt bucket `http_server_requests_active`), tổng head 99 488 series.

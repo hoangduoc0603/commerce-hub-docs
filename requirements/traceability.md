@@ -53,7 +53,7 @@ Thành phần sở hữu đã chốt cho G0–G1 ở phase thiết kế: mỗi s
 | N4 | 3 | Mất 100% webhook trong 30 phút |
 | N7, N8 | 3 | Sàn giảm hạn mức, một sàn sập, Workspace lớn chiếm 30% tải |
 | N6 | 5 | Flash sale 500 đơn/s |
-| N12 | 0 (khung), 2 (xuyên Kafka) | Một đơn đi qua mọi thành phần |
+| N12 | 0 (khung), 2 (xuyên Kafka) | Một đơn đi qua mọi thành phần. **G0 xong phần khung (2026-11-28, [G0-30](../.scratch/g0-platform/issues/30-hello-observability.md)):** `hello` có trace (span HTTP và JDBC trên Tempo), log ECS có `trace_id` trên Loki, metric có exemplar; dashboard [Service overview](https://grafana.lab.internal/d/service-overview/service-overview?var-service=hello); trace mẫu `51e7a2fee892be06eb5e3388419355c5` (Tempo giữ 7 ngày) |
 | N16 | 4 | Kill pod giữa saga, giữa lúc giữ tồn |
 | N9, N10, N15 | 7 | SLO, diễn tập khôi phục, deploy dưới tải |
 | N11, N14 | 1 (cô lập, mã hóa), 4 (xóa dữ liệu) | Test cô lập tự động, kiểm job dọn dẹp |
