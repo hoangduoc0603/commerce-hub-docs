@@ -1,6 +1,6 @@
 # 13: Prometheus và Grafana dạng code
 
-Status: ready-for-human
+Status: resolved
 Blocked by: 06
 Repos: gitops, docs
 Spec: [G0](../spec.md)
@@ -27,11 +27,11 @@ Tiêu chí hoãn tới G7:
 
 ## Tiêu chí nghiệm thu
 
-- [ ] Đăng nhập Grafana bằng admin cục bộ; mật khẩu lấy từ `SealedSecret`, không nằm dạng rõ trong `gitops`.
-- [ ] Dashboard mặc định của cụm có dữ liệu cho cả 3 node.
-- [ ] Sửa một dashboard trên UI rồi sync lại thì bị ghi đè bằng bản trong Git.
-- [ ] `prometheus_tsdb_head_series` ghi vào bản ghi thí nghiệm G0 làm mốc.
-- [ ] Prometheus và Alertmanager không có route trên `edge` (chỉ `port-forward`).
+- [x] Đăng nhập Grafana bằng admin cục bộ; mật khẩu lấy từ `SealedSecret`, không nằm dạng rõ trong `gitops`. (bước 5: đăng nhập được, sai mật khẩu 401; `check-no-plain-secrets.sh` OK)
+- [x] Dashboard mặc định của cụm có dữ liệu cho cả 3 node. (bước 5: "Node Exporter / Nodes" có `k8s-cp`, `k8s-w1`, `k8s-w2`)
+- [x] Sửa một dashboard trên UI rồi sync lại thì bị ghi đè bằng bản trong Git. (bước 6: đạt theo nghĩa mạnh hơn: Save bị từ chối `Cannot save provisioned dashboard`, bản "Save as" mất khi pod tạo lại, sửa Git tự nạp sau 13 s)
+- [x] `prometheus_tsdb_head_series` ghi vào bản ghi thí nghiệm G0 làm mốc. (bước 8: 96 293, [bản ghi G0 mục 10](../../../experiments/2026-11-g0.md))
+- [x] Prometheus và Alertmanager không có route trên `edge` (chỉ `port-forward`). (bước 5: `prometheus.`, `alertmanager.lab.internal` trả 404; HTTPRoute duy nhất trong `observability` là `grafana`)
 
 ## Chuyển từ G0-10
 
@@ -69,3 +69,17 @@ Duyệt 2026-11-27. Phiên bản (tra 2026-11-27 bằng `helm pull`): chart `kub
   - Làm 2026-11-28, gitops `2fbe8f9`, `7af27b2` (Claude làm khi được giao). ServiceMonitor `keycloak` do Operator tạo (target `up`, 2 807 series), nhưng chỉ xuất hiện sau khi Operator restart lúc lab reboot (CRD có từ 27/11 11:05, monitor 28/11 02:38): Operator xét CRD lúc khởi động. Vì vậy `keycloak-operator` dời wave 6 → 7, sau `kube-prometheus-stack` (6), để cụm trắng không đua (diễn tập cụm trắng: G7). `spec.networkPolicy.management` chỉ namespace `observability`: gọi `keycloak-service.keycloak:9000/metrics` bằng pod `curlimages/curl:8.11.1` trước/sau: `default` 200 → timeout, `hello` → timeout, `observability` 200 → 200; target vẫn `up`; `keycloak-0` Ready, không event probe lỗi mới. Đã tick hai mục tương ứng của `keycloak.md`.
 - [x] 8. Đo mốc: `prometheus_tsdb_head_series`, `topk(10, count by (__name__)(...))`, `count({workspace_id!=""})`, `kubectl top pods -n observability` so với ngân sách ticket 04. Kiểm: mục mới trong `docs/experiments/2026-11-g0.md`.
   - Làm 2026-11-28 (Claude làm khi được giao). [Bản ghi G0 mục 10](../../../experiments/2026-11-g0.md): 96 293 series (48% ngân sách), apiserver 52 809; 0 series mang nhãn bị cấm; tổng limit `observability` 2 256 MiB so với ngân sách 1 872 (Grafana 640 thay vì 320); RSS Grafana đỉnh 308 / 384 MiB. Số đo 25 phút sau reboot, chưa phải số 24 giờ: đo lại trước ticket 34. Cập nhật `observability.md` (Grafana 13.3.2, key `existingSecret`, quyền sidecar, mốc series, ngân sách RAM), `gitops-argocd.md` (root bị ghim khi values nằm trong Application, `terminate-op --core`).
+
+### Kết ticket (2026-11-28)
+
+- Kiểm lại toàn bộ: `check-no-plain-secrets.sh` OK; `kubectl kustomize` của `infra/kube-prometheus-stack`, `infra/keycloak` và `helm template` chart 94.1.0 với values thật đều chạy; 16 app `Synced/Healthy`; mọi pod `observability` Running; 10 CRD. `gitops` không có test tự động.
+- Review hai trục (skill `code-review`, 3ac98bc..HEAD của `gitops`). Đã sửa theo review (gitops `4f1757a`): namespace `observability` thêm `Delete=false` (app có finalizer cascade, xóa app sẽ xóa namespace và PVC; gitops-argocd.md mục tài nguyên giữ dữ liệu); ConfigMap dashboard wave -1; ghi lệch tại chỗ: `runbook_url` của ~130 alert mặc định trỏ upstream, GOMEMLIMIT không đặt cho Alertmanager, kube-state-metrics, node-exporter, config-reloader (dùng 14–31 Mi); comment wave cũ; comment sai "project commerce chỉ khai ServiceMonitor của mình" (ServiceMonitor đặt được `namespaceSelector` sang namespace khác, ghi cho ticket 30).
+- Không sửa, ghi lại: ngân sách `200000` lặp ở rule và 5 panel dashboard (đổi ngân sách phải sửa nhiều chỗ; chấp nhận, ngân sách hiếm đổi); PSA `privileged` cho cả namespace là bề mặt rộng hơn cần (namespace duy nhất gọi được cổng 9000 của Keycloak), xét lại ở G7 cùng phương án tách node-exporter; `disableNameSuffixHash` dựa trên suy luận chưa thử; RAM `observability` vượt ngân sách ticket 04 (2 256 so với 1 872 Mi), chuyển ticket 34; mục tiêu học "ServiceMonitor" mới dừng ở mức cấu hình chọn monitor và đọc monitor do chart, Keycloak Operator sinh, monitor tự viết đầu tiên ở ticket 30.
+- Bàn giao: mục "Chuyển từ G0-13" trong ticket 14, 30, 34. Ma trận truy vết không có dòng cho hạ tầng G0, không thêm dòng.
+
+## Bài học
+
+- Operator là vòng lặp watch → so → sửa, nhưng "watch" có giới hạn: Keycloak Operator chỉ xét CRD ServiceMonitor lúc khởi động. CRD có từ 27/11 11:05, ServiceMonitor chỉ ra sau khi lab reboot (28/11 02:38). Không có lỗi nào, chỉ thiếu target. Bài học: thứ tự sync wave giữa hai operator là một phụ thuộc thật, phải khai; và kiểm "monitor có không" bằng target trong Prometheus, không bằng việc CRD đã có.
+- Chart bên thứ ba mặc định rộng hơn mình nghĩ. kube-prometheus-stack cho sidecar Grafana đọc mọi Secret của cụm qua ClusterRole; lộ ra chỉ vì sidecar bị OOMKilled khi liệt kê chúng. Tương tự, `serviceMonitorSelectorNilUsesHelmValues: true` bỏ qua im lặng mọi monitor không mang nhãn `release`. Đọc template, không chỉ đọc values.
+- Ngân sách RAM ước lượng sai gấp đôi ở Grafana 13 (640 so với 320 Mi), và cả hai lần OOM xảy ra trong 2 giây đầu, mẫu 30 s của cAdvisor không bắt được: số "đỉnh" từ Prometheus là cận dưới. Cách đo đúng là nâng limit tạm, đo, rồi chốt với dư; với tiến trình Python thì đỉnh lúc khởi động mới là số quyết định.
+- Câu chuyện phỏng vấn: dựng Prometheus Operator bằng GitOps, áp 10 CRD 4,4 MB làm cainjector của cert-manager bị SIGKILL vì nó cache mọi CRD trong cụm; tìm ra bằng exit 137 đúng lúc áp, sửa bằng hai cờ tắt theo dõi CRD, APIService (cụm không có CRD nào cần inject CA), RAM cainjector 58 → 16 MiB. Thêm: mốc 96 293 series (48% ngân sách), 0 series mang nhãn `workspace_id`, apiserver chiếm hơn nửa.

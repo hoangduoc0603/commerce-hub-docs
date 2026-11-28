@@ -56,3 +56,9 @@ Tiêu chí hoãn tới G7:
 ## Chuyển từ G0-11
 
 - Mailpit chưa cài trên `gw` (2026-11-27 chỉ có dnsmasq; `platform/docs/homelab-hyperv.md` mục 8.9 mô tả cách cài). Chủ repo bỏ qua tiêu chí "email thử tới Mailpit, đo RAM Mailpit" ở G0-11. Story 83 (RAM của Mailpit trên `gw`) cần Mailpit chạy trước. Kiểm gửi email: `PUT /admin/realms/commerce-hub/users/{id}/execute-actions-email` với `["VERIFY_EMAIL"]` cho một user thử có email, rồi `curl -s http://10.20.0.5:8025/api/v1/messages`. Không dùng nút "Test connection" của realm bằng client service account: endpoint đó gửi tới email của admin đang đăng nhập.
+
+## Chuyển từ G0-13
+
+- RAM thành phần quan sát (2026-11-28, 25 phút sau reboot, [bản ghi G0 mục 10](../../../experiments/2026-11-g0.md)): tổng limit `observability` **2 256 Mi** so với 1 872 Mi trong bảng ticket kiến trúc 04. Lệch chính: Grafana 13 và hai sidecar 640 Mi thay vì 320 (224 + 2 × 48 OOMKilled lúc khởi động); hai config-reloader × 32 Mi không có trong bảng. Prometheus 693/1 024 Mi working set ở 96 293 series. Đo lại sau 24 giờ chạy nền rồi mới chốt ADR-0004. Phương án bớt 128 Mi: tắt sidecar datasources, khai datasource bằng file provisioning.
+- cainjector của cert-manager: 15–16 Mi sau khi tắt theo dõi CRD, APIService (trước đó 58/64 Mi và một lần SIGKILL khi áp CRD của Prometheus Operator).
+- Metric của etcd, scheduler, controller-manager, kube-proxy tắt (kubeadm nghe 127.0.0.1): Hoãn tới G7, nằm ngoài GitOps (static pod manifest, ConfigMap kube-proxy).

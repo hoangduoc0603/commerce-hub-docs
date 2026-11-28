@@ -30,3 +30,10 @@ Spec: [G0](../spec.md)
 - Sampling mặc định của Boot 4.1.2 là `management.tracing.sampling.probability: 0.1` (metadata của jar). Problem Details luôn trả `traceId`, nên nếu không đặt `1.0` (head sampling 100% theo [observability.md](../../../standards/observability.md)) thì khoảng 90% `traceId` dẫn tới trace không có trên Tempo.
 - Bật export bằng property hoặc bằng biến `OTEL_*`, chọn một cách. Biến `OTEL_TRACES_EXPORTER` đè cả yaml lẫn `-D` (đã tái hiện ở G0-28). Kiểm env của pod bằng `kubectl -n hello exec deploy/hello -- env | grep OTEL`.
 
+
+## Chuyển từ G0-13
+
+- Prometheus chọn **mọi** ServiceMonitor, PodMonitor, PrometheusRule ở mọi namespace (`*SelectorNilUsesHelmValues: false`), không cần nhãn `release`. Chart `app` chỉ cần sinh `ServiceMonitor` trỏ cổng quản trị (`/actuator/prometheus`) trong namespace `hello`; project `commerce` của Argo CD hiện không cấm Kind `ServiceMonitor` (kiểm lại blacklist khi thêm). Lưu ý quyền: ServiceMonitor của một service có thể khai `namespaceSelector` trỏ namespace khác và Prometheus sẽ scrape theo. Chặn bằng `prometheusSpec.ignoreNamespaceSelectors: true` thì vỡ các monitor của chart (kubelet, CoreDNS ở `kube-system`, apiserver ở `default` đều nằm ở `observability`), nên nếu cần thì chặn ở Argo CD (blacklist hoặc policy), quyết khi làm.
+- Dashboard "Service overview" là ConfigMap nhãn `grafana_dashboard: "1"` đặt ở `gitops/infra/kube-prometheus-stack/dashboards/` (sidecar chỉ tìm trong `observability`), `configMapGenerator` có `disableNameSuffixHash: true` (lý do ở `infra/kube-prometheus-stack/kustomization.yaml`). Dashboard mẫu: `cardinality.json`.
+- Ngân sách: tổng 96 293 series lúc G0-13 (48% của 200 000). Alert "5 000 series mỗi pod service" chưa có: thêm vào `prometheusrule-series-budget.yaml` khi có ServiceMonitor đầu tiên của service, với nhãn tách được pod service khỏi pod hạ tầng (ví dụ `namespace="hello"` hoặc nhãn `service`). Kiểm lại panel "Series mang nhãn bị cấm" của dashboard `Cardinality` vẫn 0 sau khi `hello` có metric.
+- Grafana không có route cho Prometheus; smoke test đọc Prometheus qua `https://grafana.lab.internal/api/datasources/proxy/uid/prometheus/...`.

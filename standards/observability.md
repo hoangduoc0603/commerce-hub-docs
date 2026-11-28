@@ -58,7 +58,7 @@ Từ 2026-11-15 hạ tầng chỉ cần mức tối thiểu (CLAUDE.md, mục Ch
 ### SLO và alert (khung; chi tiết ở giai đoạn 7)
 - [ ] SLI viết thành recording rule trên histogram: N1 (webhook ack p99 < 300 ms, sẵn sàng 99,95%), N3 (`stock_sync_lag_seconds` p95 < 30 s), N9 (API đọc 99,9%). [Prometheus – Recording rules](https://prometheus.io/docs/prometheus/latest/configuration/recording_rules/)
 - [ ] Alert theo burn rate nhiều cửa sổ (ví dụ 1 h/5 phút và 6 h/30 phút), không alert theo CPU. Alert theo triệu chứng của người dùng giảm báo động giả. [Google SRE Workbook – Alerting on SLOs](https://sre.google/workbook/alerting-on-slos/)
-- [ ] Mỗi alert có annotation `runbook_url` trỏ vào `docs/runbooks/`.
+- [ ] Mỗi alert có annotation `runbook_url` trỏ vào `docs/runbooks/`. **G0-13:** alert tự viết đạt (`PrometheusSeriesBudgetExceeded` → `runbooks/series-budget.md`). Lệch có chủ đích: khoảng 130 alert mặc định của kube-prometheus-stack giữ `runbook_url` upstream (`runbooks.prometheus-operator.dev`); không viết lại runbook cho chúng.
 
 ## Lựa chọn và phương án đã loại
 
